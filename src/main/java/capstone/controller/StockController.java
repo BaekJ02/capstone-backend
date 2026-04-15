@@ -60,4 +60,29 @@ public class StockController {
             @RequestParam(defaultValue = "0") String period) {
         return stockService.getOverseasChartData(symbol, exchange, period);
     }
+
+    // 국내 주식 분봉
+    @GetMapping("/chart/domestic/{symbol}/minute")
+    public List<ChartDataDto> getDomesticMinuteChart(
+            @PathVariable String symbol,
+            @RequestParam(defaultValue = "1") String timeUnit) {
+        return stockService.getDomesticMinuteData(symbol, timeUnit);
+    }
+
+    // 미국 주식 분봉
+    @GetMapping("/chart/overseas/{symbol}/minute")
+    public List<ChartDataDto> getOverseasMinuteChart(
+            @PathVariable String symbol,
+            @RequestParam(defaultValue = "NAS") String exchange,
+            @RequestParam(defaultValue = "1") String timeUnit) {
+        return stockService.getOverseasMinuteData(symbol, exchange, timeUnit);
+    }
+
+    // 미국 주식 연봉
+    @GetMapping("/chart/overseas/{symbol}/yearly")
+    public List<ChartDataDto> getOverseasYearlyChart(
+            @PathVariable String symbol,
+            @RequestParam(defaultValue = "NAS") String exchange) {
+        return stockService.getOverseasYearlyData(symbol, exchange);
+    }
 }

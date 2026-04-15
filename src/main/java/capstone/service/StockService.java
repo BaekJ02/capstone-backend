@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
 import capstone.dto.ChartDataDto;
+import java.util.LinkedHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -193,5 +194,127 @@ public class StockService {
         return result;
     }
 
+    // 국내 주식 분봉 데이터
+    public List<ChartDataDto> getDomesticMinuteData(String symbol, String timeUnit) {
+        String url = baseUrl + "/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice"
+                + "?fid_etc_cls_code="
+                + "&fid_cond_mrkt_div_code=J"
+                + "&fid_input_iscd=" + symbol
+                + "&fid_input_hour_1=160000"
+                + "&fid_pw_data_incu_yn=Y"
+                + "&fid_time_dvsn=" + timeUnit;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("authorization", "Bearer " + kisAuthService.getAccessToken());
+        headers.set("appkey", appKey);
+        headers.set("appsecret", appSecret);
+        headers.set("tr_id", "FHKST03010200");
+        headers.set("custtype", "P");
+
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+        Map<String, Object> response = restTemplate.exchange(url, HttpMethod.GET, request, Map.class).getBody();
+
+        List<Map<String, String>> output = (List<Map<String, String>>) response.get("output2");
+
+        List<ChartDataDto> result = new ArrayList<>();
+        if (output != null) {
+            for (Map<String, String> item : output) {
+                ChartDataDto dto = new ChartDataDto();
+                dto.setDate(item.get("stck_cntg_hour"));  // 시간
+                dto.setOpen(item.get("stck_oprc"));        // 시가
+                dto.setHigh(item.get("stck_hgpr"));        // 고가
+                dto.setLow(item.get("stck_lwpr"));         // 저가
+                dto.setClose(item.get("stck_prpr"));       // 현재가
+                dto.setVolume(item.get("cntg_vol"));       // 거래량
+                result.add(dto);
+            }
+        }
+        return result;
+    }
+    // 미국 주식 분봉 데이터
+    public List<ChartDataDto> getOverseasMinuteData(String symbol, String exchange, String timeUnit) {
+        String url = baseUrl + "/uapi/overseas-price/v1/quotations/inquire-time-itemchartprice"
+                + "?AUTH="
+                + "&EXCD=" + exchange
+                + "&SYMB=" + symbol
+                + "&NMIN=" + timeUnit
+                + "&PINC=1"
+                + "&NEXT="
+                + "&NREC=120"
+                + "&FILL="
+                + "&KEYB=";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("authorization", "Bearer " + kisAuthService.getAccessToken());
+        headers.set("appkey", appKey);
+        headers.set("appsecret", appSecret);
+        headers.set("tr_id", "HHDFS76950200");
+        headers.set("custtype", "P");
+
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+        Map<String, Object> response = restTemplate.exchange(url, HttpMethod.GET, request, Map.class).getBody();
+
+        List<Map<String, String>> output = (List<Map<String, String>>) response.get("output2");
+
+        List<ChartDataDto> result = new ArrayList<>();
+        if (output != null) {
+            for (Map<String, String> item : output) {
+                ChartDataDto dto = new ChartDataDto();
+                dto.setDate(item.get("kymd") + item.get("khms")); // 날짜+시간
+                dto.setOpen(item.get("open"));
+                dto.setHigh(item.get("high"));
+                dto.setLow(item.get("low"));
+                dto.setClose(item.get("last"));
+                dto.setVolume(item.get("evol"));
+                result.add(dto);
+            }
+        }
+        return result;
+    }
+
+    // 미국 주식 연봉 데이터 (월봉 데이터로 변환)
+    public List<ChartDataDto> getOverseasYearlyData(String symbol, String exchange) {
+        // 월봉 데이터 가져오기
+        List<ChartDataDto> monthlyData = getOverseasChartData(symbol, exchange, "2");
+
+        // 연도별로 그룹핑
+        Map<String, List<ChartDataDto>> groupedByYear = new LinkedHashMap<>();
+        for (ChartDataDto item : monthlyData) {
+            String year = item.getDate().substring(0, 4); // 앞 4자리가 연도
+            groupedByYear.computeIfAbsent(year, k -> new ArrayList<>()).add(item);
+        }
+
+        // 연봉으로 변환
+        List<ChartDataDto> result = new ArrayList<>();
+        for (Map.Entry<String, List<ChartDataDto>> entry : groupedByYear.entrySet()) {
+            List<ChartDataDto> monthList = entry.getValue();
+
+            String open = monthList.get(monthList.size() - 1).getOpen();   // 첫달 시가
+            String close = monthList.get(0).getClose();                     // 마지막달 종가
+            String high = monthList.stream()
+                    .map(d -> Double.parseDouble(d.getHigh()))
+                    .max(Double::compareTo)
+                    .map(String::valueOf)
+                    .orElse("0");
+            String low = monthList.stream()
+                    .map(d -> Double.parseDouble(d.getLow()))
+                    .min(Double::compareTo)
+                    .map(String::valueOf)
+                    .orElse("0");
+            long totalVolume = monthList.stream()
+                    .mapToLong(d -> Long.parseLong(d.getVolume()))
+                    .sum();
+
+            ChartDataDto dto = new ChartDataDto();
+            dto.setDate(entry.getKey());
+            dto.setOpen(open);
+            dto.setHigh(high);
+            dto.setLow(low);
+            dto.setClose(close);
+            dto.setVolume(String.valueOf(totalVolume));
+            result.add(dto);
+        }
+        return result;
+    }
 
 }
