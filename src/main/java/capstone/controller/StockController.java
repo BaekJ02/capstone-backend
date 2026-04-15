@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import capstone.dto.ChartDataDto;
 
 @RestController
 @RequiredArgsConstructor
@@ -41,5 +42,22 @@ public class StockController {
     @GetMapping("/search")
     public List<StockSearchDto> searchStock(@RequestParam String keyword) {
         return stockSearchService.search(keyword);
+    }
+
+    // 국내 주식 차트 데이터
+    @GetMapping("/chart/domestic/{symbol}")
+    public List<ChartDataDto> getDomesticChart(
+            @PathVariable String symbol,
+            @RequestParam(defaultValue = "D") String period) {
+        return stockService.getDomesticChartData(symbol, period);
+    }
+
+    // 미국 주식 차트 데이터
+    @GetMapping("/chart/overseas/{symbol}")
+    public List<ChartDataDto> getOverseasChart(
+            @PathVariable String symbol,
+            @RequestParam(defaultValue = "NAS") String exchange,
+            @RequestParam(defaultValue = "0") String period) {
+        return stockService.getOverseasChartData(symbol, exchange, period);
     }
 }

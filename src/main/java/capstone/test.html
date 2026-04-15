@@ -6,35 +6,42 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; }
-        .search-box { margin-bottom: 20px; }
-        .search-results { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; width: 300px; }
-        .search-item { padding: 8px; cursor: pointer; }
+        .section { margin-bottom: 30px; border: 1px solid #ddd; padding: 15px; border-radius: 8px; }
+        .search-results { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; width: 350px; }
+        .search-item { padding: 8px; cursor: pointer; display: flex; justify-content: space-between; }
         .search-item:hover { background-color: #f0f0f0; }
-        .stock-card { border: 1px solid #ddd; padding: 15px; margin: 10px 0; width: 300px; }
+        .market-badge { font-size: 11px; padding: 2px 6px; border-radius: 4px; color: white; }
+        .KOSPI { background-color: #1976D2; }
+        .KOSDAQ { background-color: #388E3C; }
+        .ETF { background-color: #F57C00; }
+        .NASDAQ { background-color: #7B1FA2; }
+        .NYSE { background-color: #C62828; }
+        .AMEX { background-color: #00838F; }
+        .OTHER { background-color: #616161; }
+        .stock-card { border: 1px solid #ddd; padding: 15px; margin-top: 10px; border-radius: 8px; min-height: 60px; }
+        input { padding: 8px; width: 250px; margin-right: 5px; }
+        select { padding: 8px; margin-right: 5px; }
+        button { padding: 8px 12px; cursor: pointer; }
     </style>
 </head>
 <body>
-<h2>실시간 주가 테스트</h2>
+<h2>📈 주식 실시간 테스트</h2>
 
 <!-- 국내 주식 검색 -->
-<div class="search-box">
-    <h3>🇰🇷 국내 주식</h3>
-    <input id="domesticKeyword" placeholder="종목명 검색 (예: 삼성)" oninput="searchDomestic()" />
+<div class="section">
+    <h3>🇰🇷 국내 주식 / ETF</h3>
+    <input id="domesticKeyword" placeholder="종목명 검색 (예: 삼성, KODEX)" oninput="searchDomestic()" />
+    <button onclick="unsubscribeDomestic()">구독취소</button>
     <div class="search-results" id="domesticSearchResults"></div>
     <div class="stock-card" id="domesticResult">종목을 선택해주세요</div>
 </div>
 
 <!-- 미국 주식 검색 -->
-<div class="search-box">
+<div class="section">
     <h3>🇺🇸 미국 주식</h3>
-    <input id="overseasSymbol" placeholder="종목코드 직접 입력 (예: AAPL)" />
-    <select id="exchange">
-        <option value="NAS">나스닥 (AAPL, TSLA 등)</option>
-        <option value="NYS">뉴욕 (BRK 등)</option>
-        <option value="AMS">아멕스 (VOO, SPY 등)</option>
-    </select>
-    <button onclick="subscribeOverseas()">구독</button>
+    <input id="overseasKeyword" placeholder="종목명/코드 검색 (예: Apple, AAPL)" oninput="searchOverseas()" />
     <button onclick="unsubscribeOverseas()">구독취소</button>
+    <div class="search-results" id="overseasSearchResults"></div>
     <div class="stock-card" id="overseasResult">종목을 선택해주세요</div>
 </div>
 
@@ -47,6 +54,14 @@
         console.log('WebSocket 연결 성공!');
     });
 
+    // 거래소 코드 자동 매핑
+    function getExchangeCode(market) {
+        if (market === 'NASDAQ') return 'NAS';
+        if (market === 'NYSE') return 'NYS';
+        if (market === 'AMEX' || market === 'OTHER') return 'AMS';
+        return 'NAS';
+    }
+
     // 국내 주식 검색
     function searchDomestic() {
         const keyword = document.getElementById('domesticKeyword').value;
@@ -58,13 +73,51 @@
         fetch(`http://localhost:8080/api/stocks/search?keyword=${keyword}`)
             .then(res => res.json())
             .then(data => {
+                // 국내 주식/ETF만 필터링
+                const filtered = data.filter(s =>
+                    s.market === 'KOSPI' || s.market === 'KOSDAQ' || s.market === 'ETF'
+                );
                 const resultsDiv = document.getElementById('domesticSearchResults');
                 resultsDiv.innerHTML = '';
-                data.forEach(stock => {
+                filtered.forEach(stock => {
                     const item = document.createElement('div');
                     item.className = 'search-item';
-                    item.innerHTML = `${stock.name} (${stock.symbol}) - ${stock.market}`;
+                    item.innerHTML = `
+                        <span>${stock.name} (${stock.symbol})</span>
+                        <span class="market-badge ${stock.market}">${stock.market}</span>
+                    `;
                     item.onclick = () => selectDomesticStock(stock.symbol, stock.name);
+                    resultsDiv.appendChild(item);
+                });
+            });
+    }
+
+    // 미국 주식 검색
+    function searchOverseas() {
+        const keyword = document.getElementById('overseasKeyword').value;
+        if (keyword.length < 1) {
+            document.getElementById('overseasSearchResults').innerHTML = '';
+            return;
+        }
+
+        fetch(`http://localhost:8080/api/stocks/search?keyword=${keyword}`)
+            .then(res => res.json())
+            .then(data => {
+                // 미국 주식만 필터링
+                const filtered = data.filter(s =>
+                    s.market === 'NASDAQ' || s.market === 'NYSE' ||
+                    s.market === 'AMEX' || s.market === 'OTHER'
+                );
+                const resultsDiv = document.getElementById('overseasSearchResults');
+                resultsDiv.innerHTML = '';
+                filtered.forEach(stock => {
+                    const item = document.createElement('div');
+                    item.className = 'search-item';
+                    item.innerHTML = `
+                        <span>${stock.name} (${stock.symbol})</span>
+                        <span class="market-badge ${stock.market}">${stock.market}</span>
+                    `;
+                    item.onclick = () => selectOverseasStock(stock.symbol, stock.name, stock.market);
                     resultsDiv.appendChild(item);
                 });
             });
@@ -75,7 +128,6 @@
         document.getElementById('domesticKeyword').value = name;
         document.getElementById('domesticSearchResults').innerHTML = '';
 
-        // 기존 구독 끊기
         if (subscriptions['domestic']) {
             subscriptions['domestic'].unsubscribe();
         }
@@ -85,38 +137,49 @@
             const data = JSON.parse(message.body);
             document.getElementById('domesticResult').innerHTML =
                 `<b>${name} (${data.symbol})</b><br>
-                    현재가: ${Number(data.price).toLocaleString()}원<br>
-                    전일대비: ${data.change} (${data.changePercent}%)`;
+                현재가: ${Number(data.price).toLocaleString()}원<br>
+                전일대비: ${data.change} (${data.changePercent}%)`;
         });
     }
 
-    // 미국 주식 구독
-    function subscribeOverseas() {
-        const symbol = document.getElementById('overseasSymbol').value;
-        const exchange = document.getElementById('exchange').value;
+    // 미국 주식 선택
+    function selectOverseasStock(symbol, name, market) {
+        document.getElementById('overseasKeyword').value = name;
+        document.getElementById('overseasSearchResults').innerHTML = '';
 
         if (subscriptions['overseas']) {
             subscriptions['overseas'].unsubscribe();
         }
 
+        const exchange = getExchangeCode(market);
         stompClient.send("/app/subscribe/overseas", {}, symbol + "," + exchange);
         subscriptions['overseas'] = stompClient.subscribe('/topic/overseas/' + symbol, function (message) {
             const data = JSON.parse(message.body);
             document.getElementById('overseasResult').innerHTML =
-                `<b>${data.symbol}</b><br>
-                    현재가: $${data.price}<br>
-                    전일대비: ${data.change} (${data.changePercent}%)`;
+                `<b>${name} (${data.symbol})</b> <span class="market-badge ${market}">${market}</span><br>
+                현재가: $${data.price}<br>
+                전일대비: ${data.change} (${data.changePercent}%)`;
         });
     }
 
-    // 미국 주식 구독취소
+    // 구독 취소
+    function unsubscribeDomestic() {
+        if (subscriptions['domestic']) {
+            subscriptions['domestic'].unsubscribe();
+            delete subscriptions['domestic'];
+        }
+        document.getElementById('domesticKeyword').value = '';
+        document.getElementById('domesticSearchResults').innerHTML = '';
+        document.getElementById('domesticResult').innerHTML = '종목을 선택해주세요';
+    }
+
     function unsubscribeOverseas() {
-        const symbol = document.getElementById('overseasSymbol').value;
-        stompClient.send("/app/unsubscribe/overseas", {}, symbol);
         if (subscriptions['overseas']) {
             subscriptions['overseas'].unsubscribe();
             delete subscriptions['overseas'];
         }
+        document.getElementById('overseasKeyword').value = '';
+        document.getElementById('overseasSearchResults').innerHTML = '';
         document.getElementById('overseasResult').innerHTML = '종목을 선택해주세요';
     }
 </script>

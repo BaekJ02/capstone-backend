@@ -1,18 +1,18 @@
 package capstone.service;
 
 import capstone.dto.StockSearchDto;
+import com.opencsv.CSVReader;
+import com.opencsv.CSVReaderBuilder;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
-import java.io.BufferedReader;
+import org.springframework.web.client.RestTemplate;
+
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import com.opencsv.CSVReader;
-import com.opencsv.CSVReaderBuilder;
-import java.io.InputStreamReader;
 
 @Service
 public class StockSearchService {
@@ -23,6 +23,7 @@ public class StockSearchService {
     public void loadStockData() {
         loadCsv("stocks.csv", "주식");
         loadCsv("etf.csv", "ETF");
+        loadUsStocks();
     }
 
     private void loadCsv(String filename, String type) {
@@ -41,13 +42,13 @@ public class StockSearchService {
                 StockSearchDto dto = new StockSearchDto();
 
                 if (type.equals("ETF")) {
-                    dto.setSymbol(line[0].trim());  // 종목코드
-                    dto.setName(line[1].trim());    // 종목명
+                    dto.setSymbol(line[0].trim());
+                    dto.setName(line[1].trim());
                     dto.setMarket("ETF");
                 } else {
-                    dto.setSymbol(line[1].trim());  // 단축코드
-                    dto.setName(line[3].trim());    // 한글종목약명
-                    dto.setMarket(line[6].trim());  // 시장구분
+                    dto.setSymbol(line[1].trim());
+                    dto.setName(line[3].trim());
+                    dto.setMarket(line[6].trim());
                 }
 
                 stockList.add(dto);
@@ -60,12 +61,67 @@ public class StockSearchService {
         }
     }
 
+    private void loadUsStocks() {
+        loadUsStockFile("https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt", "NAS");
+        loadUsStockFile("https://www.nasdaqtrader.com/dynamic/SymDir/otherlisted.txt", "OTHER");
+    }
+
+    private void loadUsStockFile(String url, String type) {
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            String content = restTemplate.getForObject(url, String.class);
+
+            if (content == null) return;
+
+            String[] lines = content.split("\n");
+            boolean isFirst = true;
+
+            for (String line : lines) {
+                if (isFirst) {
+                    isFirst = false;
+                    continue;
+                }
+
+                String[] parts = line.split("\\|");
+                if (parts.length < 2) continue;
+
+                String symbol = parts[0].trim();
+                String name = parts[1].trim();
+
+                if (symbol.startsWith("File Creation Time")) continue;
+                if (parts.length > 3 && parts[3].trim().equals("Y")) continue;
+
+                StockSearchDto dto = new StockSearchDto();
+                dto.setSymbol(symbol);
+                dto.setName(name);
+
+                if (type.equals("NAS")) {
+                    dto.setMarket("NASDAQ");
+                } else {
+                    if (parts.length > 3) {
+                        String exchange = parts[3].trim();
+                        if (exchange.equals("A")) dto.setMarket("AMEX");
+                        else if (exchange.equals("N")) dto.setMarket("NYSE");
+                        else dto.setMarket("OTHER");
+                    }
+                }
+
+                stockList.add(dto);
+            }
+
+            System.out.println(type + " 미국주식 데이터 로드 완료");
+
+        } catch (Exception e) {
+            System.err.println("미국주식 데이터 로드 실패: " + e.getMessage());
+        }
+    }
+
     public List<StockSearchDto> search(String keyword) {
         return stockList.stream()
                 .filter(stock ->
                         stock.getName().contains(keyword) ||
                                 stock.getSymbol().contains(keyword))
-                .limit(20) // 최대 20개만 반환
+                .limit(20)
                 .collect(Collectors.toList());
     }
 }
