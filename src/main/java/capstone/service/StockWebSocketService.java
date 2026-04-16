@@ -20,8 +20,13 @@ public class StockWebSocketService {
     @Scheduled(fixedDelay = 3000)
     public void sendDomesticStockPrices() {
         for (String symbol : subscriptionService.getDomesticSymbols()) {
-            StockPriceDto price = stockService.getDomesticStockPrice(symbol);
-            messagingTemplate.convertAndSend("/topic/domestic/" + symbol, price);
+            try {
+                StockPriceDto price = stockService.getDomesticStockPrice(symbol);
+                messagingTemplate.convertAndSend("/topic/domestic/" + symbol, price);
+                Thread.sleep(100); // 0.1초 딜레이 추가
+            } catch (Exception e) {
+                System.err.println("국내주식 조회 실패: " + e.getMessage());
+            }
         }
     }
 
@@ -29,11 +34,16 @@ public class StockWebSocketService {
     @Scheduled(fixedDelay = 3000, initialDelay = 2000)
     public void sendOverseasStockPrices() {
         for (String symbolWithExchange : subscriptionService.getOverseasSymbols()) {
-            String[] parts = symbolWithExchange.split(",");
-            String symbol = parts[0];
-            String exchange = parts.length > 1 ? parts[1] : "NAS"; // 기본값 나스닥
-            StockPriceDto price = stockService.getOverseasStockPrice(symbol, exchange);
-            messagingTemplate.convertAndSend("/topic/overseas/" + symbol, price);
+            try {
+                String[] parts = symbolWithExchange.split(",");
+                String symbol = parts[0];
+                String exchange = parts.length > 1 ? parts[1] : "NAS";
+                StockPriceDto price = stockService.getOverseasStockPrice(symbol, exchange);
+                messagingTemplate.convertAndSend("/topic/overseas/" + symbol, price);
+                Thread.sleep(100); // 0.1초 딜레이 추가
+            } catch (Exception e) {
+                System.err.println("해외주식 조회 실패: " + e.getMessage());
+            }
         }
     }
 }

@@ -1,0 +1,10 @@
+2026-04-15 23:48:38.763003+09:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "[*]ID"; expected "INSERT"; SQL statement:
+ID [42001-240]
+2026-04-15 23:52:45.841813+09:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "select * from users\000d\000a[*]select * from orders"; SQL statement:
+select * from users
+select * from orders [42000-240]
+2026-04-15 23:52:58.596485+09:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "HOLDINGS" not found; SQL statement:
+select * from holdings [42102-240]
