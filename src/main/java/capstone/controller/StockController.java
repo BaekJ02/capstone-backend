@@ -1,5 +1,6 @@
 package capstone.controller;
 
+import capstone.dto.StockDetailDto;
 import capstone.dto.StockPriceDto;
 import capstone.dto.StockSearchDto;
 import capstone.service.StockSearchService;
@@ -76,6 +77,20 @@ public class StockController {
             @RequestParam(defaultValue = "NAS") String exchange,
             @RequestParam(defaultValue = "1") String timeUnit) {
         return stockService.getOverseasMinuteData(symbol, exchange, timeUnit);
+    }
+
+    // 국내 주식 상세정보
+    @GetMapping("/detail/domestic/{symbol}")
+    public StockDetailDto getDomesticStockDetail(@PathVariable String symbol) {
+        return stockService.getDomesticStockDetail(symbol);
+    }
+
+    // 미국 주식 상세정보
+    @GetMapping("/detail/overseas/{symbol}")
+    public StockDetailDto getOverseasStockDetail(
+            @PathVariable String symbol,
+            @RequestParam(defaultValue = "NAS") String exchange) {
+        return stockService.getOverseasStockDetail(symbol, exchange);
     }
 
     // 미국 주식 연봉

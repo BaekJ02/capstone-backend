@@ -1,5 +1,6 @@
 package capstone.service;
 
+import capstone.dto.StockDetailDto;
 import capstone.dto.StockPriceDto;
 import capstone.dto.StockSearchDto;
 import lombok.RequiredArgsConstructor;
@@ -270,6 +271,114 @@ public class StockService {
             }
         }
         return result;
+    }
+
+    // 국내 주식 상세정보
+    public StockDetailDto getDomesticStockDetail(String symbol) {
+        String url = baseUrl + "/uapi/domestic-stock/v1/quotations/inquire-price"
+                + "?fid_cond_mrkt_div_code=J"
+                + "&fid_input_iscd=" + symbol;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("authorization", "Bearer " + kisAuthService.getAccessToken());
+        headers.set("appkey", appKey);
+        headers.set("appsecret", appSecret);
+        headers.set("tr_id", "FHKST01010100");
+        headers.set("custtype", "P");
+
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+        Map<String, Object> response = restTemplate.exchange(url, HttpMethod.GET, request, Map.class).getBody();
+        Map<String, String> output = (Map<String, String>) response.get("output");
+
+        StockDetailDto dto = new StockDetailDto();
+        dto.setSymbol(symbol);
+        dto.setMarket(output.get("rprs_mrkt_kor_name"));
+        dto.setPrice(output.get("stck_prpr"));
+        dto.setChange(output.get("prdy_vrss"));
+        dto.setChangePercent(output.get("prdy_ctrt"));
+        dto.setMarketCap(output.get("hts_avls"));
+        dto.setPer(output.get("per"));
+        dto.setEps(output.get("eps"));
+        dto.setPbr(output.get("pbr"));
+        dto.setBps(output.get("bps"));
+        dto.setHigh52(output.get("w52_hgpr"));
+        dto.setLow52(output.get("w52_lwpr"));
+        dto.setVolume(output.get("acml_vol"));
+        dto.setTradingValue(output.get("acml_tr_pbmn"));
+
+        return dto;
+    }
+
+    // 미국 주식 상세정보
+    public StockDetailDto getOverseasStockDetail(String symbol, String exchange) {
+        String url = baseUrl + "/uapi/overseas-price/v1/quotations/price"
+                + "?AUTH="
+                + "&EXCD=" + exchange
+                + "&SYMB=" + symbol;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("authorization", "Bearer " + kisAuthService.getAccessToken());
+        headers.set("appkey", appKey);
+        headers.set("appsecret", appSecret);
+        headers.set("tr_id", "HHDFS00000300");
+        headers.set("custtype", "P");
+
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+        Map<String, Object> response = restTemplate.exchange(url, HttpMethod.GET, request, Map.class).getBody();
+        Map<String, String> output = (Map<String, String>) response.get("output");
+
+        output.forEach((k, v) -> System.out.println(k + " = " + v));
+
+        StockDetailDto dto = new StockDetailDto();
+        dto.setSymbol(symbol);
+        dto.setPrice(output.get("last"));
+        dto.setChange(output.get("diff"));
+        dto.setChangePercent(output.get("rate"));
+        dto.setHigh52(output.get("h52p"));
+        dto.setLow52(output.get("l52p"));
+        dto.setVolume(output.get("tvol"));
+        dto.setPer(output.get("per"));
+        dto.setEps(output.get("eps"));
+
+        String url2 = baseUrl + "/uapi/overseas-price/v1/quotations/search-info"
+                + "?EXCD=" + exchange
+                + "&SYMB=" + symbol;
+
+        HttpHeaders headers2 = new HttpHeaders();
+        headers2.set("authorization", "Bearer " + kisAuthService.getAccessToken());
+        headers2.set("appkey", appKey);
+        headers2.set("appsecret", appSecret);
+        headers2.set("tr_id", "HHDFS76240000");
+        headers2.set("custtype", "P");
+
+        HttpEntity<Void> request2 = new HttpEntity<>(headers2);
+        Map<String, Object> response2 = restTemplate.exchange(url2, HttpMethod.GET, request2, Map.class).getBody();
+        Map<String, String> output2 = (Map<String, String>) response2.get("output2");
+
+        if (output2 != null) {
+            output2.forEach((k, v) -> System.out.println(k + " = " + v));
+        }
+
+        String url3 = baseUrl + "/uapi/overseas-price/v1/quotations/search-info"
+                + "?PRDT_TYPE_CD=512"
+                + "&PDNO=" + symbol;
+
+        HttpHeaders headers3 = new HttpHeaders();
+        headers3.set("authorization", "Bearer " + kisAuthService.getAccessToken());
+        headers3.set("appkey", appKey);
+        headers3.set("appsecret", appSecret);
+        headers3.set("tr_id", "HHDFS76200200");
+        headers3.set("custtype", "P");
+
+        HttpEntity<Void> request3 = new HttpEntity<>(headers3);
+        Map<String, Object> response3 = restTemplate.exchange(url3, HttpMethod.GET, request3, Map.class).getBody();
+        Map<String, String> output3 = (Map<String, String>) response3.get("output");
+
+        if (output3 != null) {
+            output3.forEach((k, v) -> System.out.println(k + " = " + v));
+        }
+
+        return dto;
     }
 
     // 미국 주식 연봉 데이터 (월봉 데이터로 변환)
