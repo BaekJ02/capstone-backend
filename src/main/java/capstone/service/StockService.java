@@ -273,6 +273,31 @@ public class StockService {
         return result;
     }
 
+    // 국내 시간외 단일가 조회
+    public StockPriceDto getDomesticOverTimePrice(String symbol) {
+        String url = baseUrl + "/uapi/domestic-stock/v1/quotations/inquire-overtime-price"
+                + "?fid_cond_mrkt_div_code=J"
+                + "&fid_input_iscd=" + symbol;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("authorization", "Bearer " + kisAuthService.getAccessToken());
+        headers.set("appkey", appKey);
+        headers.set("appsecret", appSecret);
+        headers.set("tr_id", "FHPST02310000");
+        headers.set("custtype", "P");
+
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+        Map<String, Object> response = restTemplate.exchange(url, HttpMethod.GET, request, Map.class).getBody();
+        Map<String, String> output = (Map<String, String>) response.get("output");
+
+        StockPriceDto dto = new StockPriceDto();
+        dto.setSymbol(symbol);
+        dto.setPrice(output.get("ovtm_untp"));
+        dto.setChange(output.get("ovtm_prdy_vrss"));
+        dto.setChangePercent(output.get("ovtm_prdy_ctrt"));
+        return dto;
+    }
+
     // 국내 주식 상세정보
     public StockDetailDto getDomesticStockDetail(String symbol) {
         String url = baseUrl + "/uapi/domestic-stock/v1/quotations/inquire-price"

@@ -27,6 +27,32 @@ public class KisAuthService {
     private String accessToken;
     private LocalDateTime tokenExpireTime;
 
+    // 웹소켓 접속키 (approval_key)
+    private String approvalKey;
+
+    public String getApprovalKey() {
+        if (approvalKey != null) return approvalKey;
+        return issueApprovalKey();
+    }
+
+    private String issueApprovalKey() {
+        String url = baseUrl + "/oauth2/Approval";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        Map<String, String> body = new HashMap<>();
+        body.put("grant_type", "client_credentials");
+        body.put("appkey", appKey);
+        body.put("secretkey", appSecret);
+
+        HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
+        Map<String, Object> response = restTemplate.postForObject(url, request, Map.class);
+
+        approvalKey = (String) response.get("approval_key");
+        return approvalKey;
+    }
+
     public String getAccessToken() {
         // 토큰이 있고 만료 1시간 전까지는 재사용
         if (accessToken != null && LocalDateTime.now().isBefore(tokenExpireTime.minusHours(1))) {
