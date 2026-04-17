@@ -48,7 +48,9 @@ public class StockSearchService {
                 } else {
                     dto.setSymbol(line[1].trim());
                     dto.setName(line[3].trim());
-                    dto.setMarket(line[6].trim());
+                    String market = line[6].trim();
+                    if (market.equals("KOSDAQ GLOBAL")) market = "KOSDAQ";
+                    dto.setMarket(market);
                 }
 
                 stockList.add(dto);
