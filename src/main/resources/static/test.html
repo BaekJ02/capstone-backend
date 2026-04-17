@@ -3,47 +3,246 @@
 <head>
     <meta charset="UTF-8">
     <title>캡스톤 주식 테스트</title>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.0/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <style>
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --surface2: #1c2230;
+            --border: #30363d;
+            --text: #e6edf3;
+            --text-sub: #8b949e;
+            --accent: #2f81f7;
+            --accent-dim: #1f4f9e33;
+            --up: #3fb950;
+            --down: #f85149;
+            --up-dim: #1a3a2033;
+            --down-dim: #3a1a1a33;
+            --gold: #d29922;
+            --radius: 10px;
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; }
-        h2 { color: #1a1a2e; margin-bottom: 16px; }
-        h3 { color: #0f3460; margin-bottom: 10px; }
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 24px;
+            min-height: 100vh;
+        }
+        h2 { font-size: 22px; font-weight: 700; margin-bottom: 20px; letter-spacing: -0.5px; }
+        h3 { font-size: 15px; font-weight: 600; margin-bottom: 14px; color: var(--text); }
+        h4 { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text-sub); }
         .container { max-width: 1200px; margin: 0 auto; }
-        .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        input, select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; width: 100%; margin-bottom: 8px; font-size: 14px; }
-        button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; margin-right: 6px; margin-bottom: 6px; }
-        .btn-primary { background: #0f3460; color: white; }
-        .btn-success { background: #e74c3c; color: white; }
-        .btn-danger { background: #2ecc71; color: white; }
-        .btn-secondary { background: #95a5a6; color: white; }
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; color: white; }
-        .KOSPI { background: #1976D2; }
-        .KOSDAQ { background: #388E3C; }
-        .ETF { background: #F57C00; }
-        .NASDAQ { background: #7B1FA2; }
-        .NYSE { background: #C62828; }
-        .AMEX, .OTHER { background: #616161; }
-        .search-results { border: 1px solid #ddd; max-height: 180px; overflow-y: auto; border-radius: 6px; }
-        .search-item { padding: 8px 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
-        .search-item:hover { background: #f8f9fa; }
-        .price-up { color: #e74c3c; }
-        .price-down { color: #2980b9; }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 14px;
+        }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+        input, select {
+            padding: 9px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            width: 100%;
+            margin-bottom: 8px;
+            font-size: 13px;
+            background: var(--surface2);
+            color: var(--text);
+            font-family: 'Pretendard', sans-serif;
+            transition: border-color 0.2s;
+        }
+        input:focus { outline: none; border-color: var(--accent); }
+        input[readonly] { color: var(--text-sub); cursor: default; }
+        button {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-family: 'Pretendard', sans-serif;
+            font-weight: 600;
+            margin-right: 6px;
+            margin-bottom: 6px;
+            transition: all 0.15s;
+        }
+        button:hover { opacity: 0.85; transform: translateY(-1px); }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-buy { background: var(--down); color: white; }
+        .btn-sell { background: var(--up); color: white; }
+        .btn-secondary { background: var(--surface2); color: var(--text-sub); border: 1px solid var(--border); }
+        .btn-watch { background: var(--gold); color: #1a1a1a; }
+        .btn-danger { background: transparent; color: var(--down); border: 1px solid var(--down); padding: 4px 10px; font-size: 12px; }
+        .badge {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+        .KOSPI { background: #1565C0; color: white; }
+        .KOSDAQ { background: #2E7D32; color: white; }
+        .ETF { background: #E65100; color: white; }
+        .NASDAQ { background: #6A1B9A; color: white; }
+        .NYSE { background: #B71C1C; color: white; }
+        .AMEX, .OTHER { background: #424242; color: white; }
+        .search-results {
+            border: 1px solid var(--border);
+            max-height: 180px;
+            overflow-y: auto;
+            border-radius: 6px;
+            background: var(--surface2);
+        }
+        .search-item {
+            padding: 9px 12px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.1s;
+        }
+        .search-item:last-child { border-bottom: none; }
+        .search-item:hover { background: var(--accent-dim); }
+        .price-up { color: var(--down); }
+        .price-down { color: #4fa3e0; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th { background: #0f3460; color: white; padding: 8px; text-align: left; }
-        td { padding: 8px; border-bottom: 1px solid #f0f0f0; }
-        tr:hover { background: #f8f9fa; }
-        .status { padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; font-size: 13px; }
-        .status.success { background: #d4edda; color: #155724; }
-        .status.error { background: #f8d7da; color: #721c24; }
+        th {
+            background: var(--surface2);
+            color: var(--text-sub);
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: var(--surface2); }
+        .status {
+            padding: 9px 12px;
+            border-radius: 6px;
+            margin: 8px 0;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .status.success { background: var(--up-dim); color: var(--up); border: 1px solid var(--up); }
+        .status.error { background: var(--down-dim); color: var(--down); border: 1px solid var(--down); }
         .hidden { display: none; }
-        .balance-box { background: linear-gradient(135deg, #0f3460, #16213e); color: white; border-radius: 12px; padding: 20px; }
-        .balance-amount { font-size: 28px; font-weight: bold; margin: 8px 0; }
-        .tab { display: flex; gap: 8px; margin-bottom: 16px; }
-        .tab-btn { padding: 8px 20px; border: none; border-radius: 6px; cursor: pointer; background: #ddd; }
-        .tab-btn.active { background: #0f3460; color: white; }
+        .balance-box {
+            background: linear-gradient(135deg, #0f2a5e, #1a1f35);
+            border: 1px solid #2f4a8a;
+            border-radius: var(--radius);
+            padding: 20px;
+        }
+        .balance-label { font-size: 12px; color: #8ba3d4; font-weight: 500; margin-bottom: 4px; }
+        .balance-amount {
+            font-size: 30px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            color: white;
+            margin: 6px 0 4px;
+            letter-spacing: -1px;
+        }
+        .balance-sub { font-size: 12px; color: #6b84b8; }
+        .tab { display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+        .tab-btn {
+            padding: 7px 16px;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            background: transparent;
+            color: var(--text-sub);
+            font-size: 13px;
+            margin: 0;
+            transition: all 0.15s;
+        }
+        .tab-btn:hover { background: var(--surface2); transform: none; }
+        .tab-btn.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+        .price-card {
+            margin-top: 10px;
+            padding: 14px;
+            background: var(--surface2);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            min-height: 60px;
+            font-size: 13px;
+            color: var(--text-sub);
+        }
+        .trade-total-box {
+            padding: 14px;
+            background: var(--surface2);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border);
+        }
+        .trade-total-label { font-size: 12px; color: var(--text-sub); margin-bottom: 4px; }
+        .trade-total-amount { font-size: 22px; font-weight: 700; color: var(--accent); font-family: 'JetBrains Mono', monospace; }
+
+        /* 관심종목 전용 스타일 */
+        .watchlist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+        .watch-card {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            transition: border-color 0.2s;
+            position: relative;
+        }
+        .watch-card:hover { border-color: var(--gold); }
+        .watch-card-name { font-size: 14px; font-weight: 600; }
+        .watch-card-symbol { font-size: 12px; color: var(--text-sub); font-family: 'JetBrains Mono', monospace; }
+        .watch-card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+        .watch-delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: transparent;
+            border: none;
+            color: var(--text-sub);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin: 0;
+            transition: color 0.15s, background 0.15s;
+        }
+        .watch-delete-btn:hover { color: var(--down); background: var(--down-dim); transform: none; }
+        .watch-empty { color: var(--text-sub); font-size: 13px; text-align: center; padding: 24px; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+
+        /* 스크롤바 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--surface); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        /* 로그인 화면 */
+        .auth-wrap {
+            max-width: 480px;
+            margin: 60px auto;
+        }
+        .auth-title {
+            text-align: center;
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            letter-spacing: -0.5px;
+        }
+        .auth-sub {
+            text-align: center;
+            color: var(--text-sub);
+            font-size: 13px;
+            margin-bottom: 28px;
+        }
     </style>
 </head>
 <body>
@@ -51,40 +250,48 @@
     <h2>📈 캡스톤 주식 테스트</h2>
 
     <!-- 로그인/회원가입 -->
-    <div class="card" id="authCard">
-        <h3>🔐 로그인 / 회원가입</h3>
-        <div class="grid">
-            <div>
-                <h4 style="margin-bottom:8px">로그인</h4>
-                <input id="loginEmail" placeholder="이메일" />
-                <input id="loginPassword" type="password" placeholder="비밀번호" />
-                <button class="btn-primary" onclick="login()">로그인</button>
-            </div>
-            <div>
-                <h4 style="margin-bottom:8px">회원가입</h4>
-                <input id="signupName" placeholder="이름" />
-                <input id="signupEmail" placeholder="이메일" />
-                <input id="signupPassword" type="password" placeholder="비밀번호" />
-                <button class="btn-primary" onclick="signup()">회원가입</button>
+    <div id="authCard">
+        <div class="auth-wrap">
+            <div class="auth-title">주식 테스트 플랫폼</div>
+            <div class="auth-sub">계정으로 로그인하거나 새로 가입하세요</div>
+            <div class="card">
+                <div class="tab" style="border:none;padding:0;margin-bottom:16px">
+                    <button class="tab-btn active" id="authTab1" onclick="switchAuthTab('login')">로그인</button>
+                    <button class="tab-btn" id="authTab2" onclick="switchAuthTab('signup')">회원가입</button>
+                </div>
+                <div id="loginForm">
+                    <input id="loginEmail" placeholder="이메일" />
+                    <input id="loginPassword" type="password" placeholder="비밀번호" />
+                    <button class="btn-primary" onclick="login()" style="width:100%;padding:10px">로그인</button>
+                </div>
+                <div id="signupForm" class="hidden">
+                    <input id="signupName" placeholder="이름" />
+                    <input id="signupEmail" placeholder="이메일" />
+                    <input id="signupPassword" type="password" placeholder="비밀번호" />
+                    <button class="btn-primary" onclick="signup()" style="width:100%;padding:10px">회원가입</button>
+                </div>
+                <div id="authStatus"></div>
             </div>
         </div>
-        <div id="authStatus"></div>
     </div>
 
     <!-- 로그인 후 화면 -->
     <div id="mainContent" class="hidden">
 
         <!-- 사용자 정보 & 잔고 -->
-        <div class="grid">
+        <div class="grid" style="margin-bottom:14px">
             <div class="balance-box">
-                <div>안녕하세요, <span id="userName"></span>님 👋</div>
+                <div class="balance-label">안녕하세요 👋</div>
+                <div style="font-size:18px;font-weight:700;color:white;margin-bottom:8px"><span id="userName"></span>님</div>
+                <div class="balance-label">가상 잔고</div>
                 <div class="balance-amount">₩<span id="userBalance">0</span></div>
-                <div style="font-size:13px;opacity:0.8">가상 잔고</div>
-                <button class="btn-secondary" style="margin-top:12px" onclick="logout()">로그아웃</button>
+                <div style="margin-top:14px">
+                    <button class="btn-secondary" onclick="logout()">로그아웃</button>
+                </div>
             </div>
             <div class="card" style="margin:0">
                 <h3>📊 포트폴리오 요약</h3>
-                <div id="portfolioSummary">보유 종목을 불러오는 중...</div>
+                <div id="portfolioSummary" style="color:var(--text-sub);font-size:13px">보유 종목을 불러오는 중...</div>
             </div>
         </div>
 
@@ -93,16 +300,16 @@
             <h3>🔍 종목 검색 & 실시간 주가</h3>
             <div class="grid">
                 <div>
-                    <h4 style="margin-bottom:8px">🇰🇷 국내 주식</h4>
+                    <h4>🇰🇷 국내 주식</h4>
                     <input id="domesticKeyword" placeholder="종목명 검색 (예: 삼성, KODEX)" oninput="searchDomestic()" />
                     <div class="search-results" id="domesticSearchResults"></div>
-                    <div id="domesticPriceCard" style="margin-top:8px;padding:12px;background:#f8f9fa;border-radius:8px;">종목을 선택해주세요</div>
+                    <div class="price-card" id="domesticPriceCard">종목을 선택해주세요</div>
                 </div>
                 <div>
-                    <h4 style="margin-bottom:8px">🇺🇸 미국 주식</h4>
+                    <h4>🇺🇸 미국 주식</h4>
                     <input id="overseasKeyword" placeholder="종목명/코드 검색 (예: Apple, AAPL)" oninput="searchOverseas()" />
                     <div class="search-results" id="overseasSearchResults"></div>
-                    <div id="overseasPriceCard" style="margin-top:8px;padding:12px;background:#f8f9fa;border-radius:8px;">종목을 선택해주세요</div>
+                    <div class="price-card" id="overseasPriceCard">종목을 선택해주세요</div>
                 </div>
             </div>
         </div>
@@ -112,22 +319,48 @@
             <h3>💰 모의 매매</h3>
             <div class="grid">
                 <div>
-                    <input id="tradeSymbol" placeholder="종목코드 (예: 005930)" readonly style="background:#f8f9fa" />
-                    <input id="tradeName" placeholder="종목명" readonly style="background:#f8f9fa" />
-                    <input id="tradeMarket" placeholder="시장" readonly style="background:#f8f9fa" />
+                    <input id="tradeSymbol" placeholder="종목코드 (예: 005930)" readonly />
+                    <input id="tradeName" placeholder="종목명" readonly />
+                    <input id="tradeMarket" placeholder="시장" readonly />
                     <input id="tradePrice" placeholder="가격" type="number" />
                     <input id="tradeQuantity" placeholder="수량" type="number" />
                 </div>
                 <div>
-                    <div style="padding:12px;background:#f8f9fa;border-radius:8px;margin-bottom:8px">
-                        <div style="font-size:13px;color:#666">예상 금액</div>
-                        <div id="tradeTotal" style="font-size:20px;font-weight:bold;color:#0f3460">₩0</div>
+                    <div class="trade-total-box">
+                        <div class="trade-total-label">예상 금액</div>
+                        <div class="trade-total-amount" id="tradeTotal">₩0</div>
                     </div>
-                    <button class="btn-success" onclick="trade('BUY')" style="width:100%;margin-bottom:8px;padding:12px;font-size:15px">🔴 매수</button>
-                    <button class="btn-danger" onclick="trade('SELL')" style="width:100%;padding:12px;font-size:15px">🟢 매도</button>
+                    <button class="btn-buy" onclick="trade('BUY')" style="width:100%;margin-bottom:8px;padding:12px;font-size:14px">🔴 매수</button>
+                    <button class="btn-sell" onclick="trade('SELL')" style="width:100%;padding:12px;font-size:14px">🟢 매도</button>
                 </div>
             </div>
             <div id="tradeStatus"></div>
+        </div>
+
+        <!-- ⭐ 관심 종목 -->
+        <div class="card">
+            <div class="section-header">
+                <h3>⭐ 관심 종목</h3>
+                <button class="btn-secondary" onclick="loadWatchlist()" style="font-size:12px;padding:6px 12px">새로고침</button>
+            </div>
+
+            <!-- 추가 폼 -->
+            <div style="display:flex;gap:8px;margin-bottom:16px;align-items:flex-start;flex-wrap:wrap">
+                <div style="flex:1;min-width:140px">
+                    <input id="watchKeyword" placeholder="종목명 검색 (예: 삼성)" oninput="searchWatch()" style="margin-bottom:0" />
+                    <div class="search-results" id="watchSearchResults" style="position:absolute;z-index:10;width:300px"></div>
+                </div>
+                <input id="watchSymbol" placeholder="종목코드" style="flex:1;min-width:100px;margin-bottom:0" readonly />
+                <input id="watchName" placeholder="종목명" style="flex:1;min-width:120px;margin-bottom:0" readonly />
+                <input id="watchMarket" placeholder="시장" style="flex:1;min-width:80px;margin-bottom:0" readonly />
+                <button class="btn-watch" onclick="addWatchlist()" style="white-space:nowrap;margin:0;height:38px">+ 추가</button>
+            </div>
+            <div id="watchStatus"></div>
+
+            <!-- 관심종목 카드 목록 -->
+            <div class="watchlist-grid" id="watchlistItems">
+                <div class="watch-empty">관심 종목을 추가해보세요 ⭐</div>
+            </div>
         </div>
 
         <!-- 탭: 보유종목 / 주문내역 -->
@@ -139,7 +372,7 @@
 
             <!-- 보유 종목 -->
             <div id="holdingsTab">
-                <button class="btn-primary" onclick="loadHoldings()" style="margin-bottom:12px">새로고침</button>
+                <button class="btn-secondary" onclick="loadHoldings()" style="margin-bottom:12px">새로고침</button>
                 <table>
                     <thead>
                     <tr>
@@ -152,13 +385,13 @@
                         <th>수익률</th>
                     </tr>
                     </thead>
-                    <tbody id="holdingsTable"><tr><td colspan="7" style="text-align:center">데이터 없음</td></tr></tbody>
+                    <tbody id="holdingsTable"><tr><td colspan="7" style="text-align:center;color:var(--text-sub)">데이터 없음</td></tr></tbody>
                 </table>
             </div>
 
             <!-- 주문 내역 -->
             <div id="ordersTab" class="hidden">
-                <button class="btn-primary" onclick="loadOrders()" style="margin-bottom:12px">새로고침</button>
+                <button class="btn-secondary" onclick="loadOrders()" style="margin-bottom:12px">새로고침</button>
                 <table>
                     <thead>
                     <tr>
@@ -170,7 +403,7 @@
                         <th>금액</th>
                     </tr>
                     </thead>
-                    <tbody id="ordersTable"><tr><td colspan="6" style="text-align:center">데이터 없음</td></tr></tbody>
+                    <tbody id="ordersTable"><tr><td colspan="6" style="text-align:center;color:var(--text-sub)">데이터 없음</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -186,24 +419,29 @@
 
     stompClient.connect({}, () => console.log('WebSocket 연결 성공'));
 
-    // 거래소 코드 매핑
     function getExchangeCode(market) {
         if (market === 'NASDAQ') return 'NAS';
         if (market === 'NYSE') return 'NYS';
         return 'AMS';
     }
 
-    // 숫자 포맷
     function formatNumber(n) {
         return Number(n).toLocaleString();
     }
 
-    // 상태 메시지
     function showStatus(id, msg, isError = false) {
         const el = document.getElementById(id);
         el.className = `status ${isError ? 'error' : 'success'}`;
         el.textContent = msg;
-        setTimeout(() => el.textContent = '', 3000);
+        setTimeout(() => { el.textContent = ''; el.className = ''; }, 3000);
+    }
+
+    // 로그인 탭 전환
+    function switchAuthTab(tab) {
+        document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
+        document.getElementById('signupForm').classList.toggle('hidden', tab !== 'signup');
+        document.getElementById('authTab1').classList.toggle('active', tab === 'login');
+        document.getElementById('authTab2').classList.toggle('active', tab === 'signup');
     }
 
     // 회원가입
@@ -237,6 +475,7 @@
             document.getElementById('authCard').classList.add('hidden');
             document.getElementById('mainContent').classList.remove('hidden');
             loadHoldings();
+            loadWatchlist();
         } else {
             const text = await res.text();
             showStatus('authStatus', text, true);
@@ -258,7 +497,6 @@
         document.getElementById('userBalance').textContent = formatNumber(data.balance);
     }
 
-    // 잔고 업데이트
     async function updateBalance() {
         const res = await fetch(`${BASE}/api/trade/balance`, { credentials: 'include' });
         const balance = await res.json();
@@ -273,10 +511,9 @@
             .then(r => r.json())
             .then(data => {
                 const filtered = data.filter(s => ['KOSPI','KOSDAQ','ETF'].includes(s.market));
-                const div = document.getElementById('domesticSearchResults');
-                div.innerHTML = filtered.map(s => `
+                document.getElementById('domesticSearchResults').innerHTML = filtered.map(s => `
                     <div class="search-item" onclick="selectDomestic('${s.symbol}','${s.name}','${s.market}')">
-                        <span>${s.name} (${s.symbol})</span>
+                        <span>${s.name} <span style="color:var(--text-sub);font-size:12px">${s.symbol}</span></span>
                         <span class="badge ${s.market}">${s.market}</span>
                     </div>`).join('');
             });
@@ -290,13 +527,35 @@
             .then(r => r.json())
             .then(data => {
                 const filtered = data.filter(s => ['NASDAQ','NYSE','AMEX','OTHER'].includes(s.market));
-                const div = document.getElementById('overseasSearchResults');
-                div.innerHTML = filtered.map(s => `
+                document.getElementById('overseasSearchResults').innerHTML = filtered.map(s => `
                     <div class="search-item" onclick="selectOverseas('${s.symbol}','${s.name}','${s.market}')">
-                        <span>${s.name} (${s.symbol})</span>
+                        <span>${s.name} <span style="color:var(--text-sub);font-size:12px">${s.symbol}</span></span>
                         <span class="badge ${s.market}">${s.market}</span>
                     </div>`).join('');
             });
+    }
+
+    // 관심종목용 검색
+    function searchWatch() {
+        const keyword = document.getElementById('watchKeyword').value;
+        if (keyword.length < 1) { document.getElementById('watchSearchResults').innerHTML = ''; return; }
+        fetch(`${BASE}/api/stocks/search?keyword=${keyword}`)
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('watchSearchResults').innerHTML = data.map(s => `
+                    <div class="search-item" onclick="selectWatch('${s.symbol}','${s.name}','${s.market}')">
+                        <span>${s.name} <span style="color:var(--text-sub);font-size:12px">${s.symbol}</span></span>
+                        <span class="badge ${s.market}">${s.market}</span>
+                    </div>`).join('');
+            });
+    }
+
+    function selectWatch(symbol, name, market) {
+        document.getElementById('watchKeyword').value = name;
+        document.getElementById('watchSymbol').value = symbol;
+        document.getElementById('watchName').value = name;
+        document.getElementById('watchMarket').value = market;
+        document.getElementById('watchSearchResults').innerHTML = '';
     }
 
     // 국내 주식 선택
@@ -313,9 +572,12 @@
             const change = parseFloat(data.changePercent);
             const cls = change >= 0 ? 'price-up' : 'price-down';
             document.getElementById('domesticPriceCard').innerHTML = `
-                <b>${name} (${symbol})</b> <span class="badge ${market}">${market}</span><br>
-                <span style="font-size:20px;font-weight:bold" class="${cls}">₩${formatNumber(data.price)}</span>
-                <span class="${cls}" style="font-size:13px"> ${change >= 0 ? '▲' : '▼'} ${data.change} (${data.changePercent}%)</span>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                    <b style="font-size:14px">${name}</b>
+                    <span class="badge ${market}">${market}</span>
+                </div>
+                <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace" class="${cls}">₩${formatNumber(data.price)}</div>
+                <div class="${cls}" style="font-size:12px;margin-top:4px">${change >= 0 ? '▲' : '▼'} ${data.change} (${data.changePercent}%)</div>
             `;
             document.getElementById('tradePrice').value = data.price;
             updateTradeTotal();
@@ -337,23 +599,24 @@
             const change = parseFloat(data.changePercent);
             const cls = change >= 0 ? 'price-up' : 'price-down';
             document.getElementById('overseasPriceCard').innerHTML = `
-                <b>${name} (${symbol})</b> <span class="badge ${market}">${market}</span><br>
-                <span style="font-size:20px;font-weight:bold" class="${cls}">$${data.price}</span>
-                <span class="${cls}" style="font-size:13px"> ${change >= 0 ? '▲' : '▼'} ${data.change} (${data.changePercent}%)</span>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                    <b style="font-size:14px">${name}</b>
+                    <span class="badge ${market}">${market}</span>
+                </div>
+                <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace" class="${cls}">$${data.price}</div>
+                <div class="${cls}" style="font-size:12px;margin-top:4px">${change >= 0 ? '▲' : '▼'} ${data.change} (${data.changePercent}%)</div>
             `;
             document.getElementById('tradePrice').value = data.price;
             updateTradeTotal();
         });
     }
 
-    // 매매 폼 설정
     function setTradeForm(symbol, name, market) {
         document.getElementById('tradeSymbol').value = symbol;
         document.getElementById('tradeName').value = name;
         document.getElementById('tradeMarket').value = market;
     }
 
-    // 예상 금액 업데이트
     function updateTradeTotal() {
         const price = parseFloat(document.getElementById('tradePrice').value) || 0;
         const qty = parseInt(document.getElementById('tradeQuantity').value) || 0;
@@ -384,10 +647,63 @@
         });
         const text = await res.text();
         showStatus('tradeStatus', text, !res.ok);
+        if (res.ok) { updateBalance(); loadHoldings(); }
+    }
+
+    // ===== 관심종목 =====
+    async function addWatchlist() {
+        const symbol = document.getElementById('watchSymbol').value;
+        const name = document.getElementById('watchName').value;
+        const market = document.getElementById('watchMarket').value;
+        if (!symbol || !name) { showStatus('watchStatus', '종목을 검색해서 선택해주세요.', true); return; }
+
+        const res = await fetch(`${BASE}/api/watchlist`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ symbol, name, market })
+        });
+        const text = await res.text();
+        showStatus('watchStatus', text, !res.ok);
         if (res.ok) {
-            updateBalance();
-            loadHoldings();
+            document.getElementById('watchKeyword').value = '';
+            document.getElementById('watchSymbol').value = '';
+            document.getElementById('watchName').value = '';
+            document.getElementById('watchMarket').value = '';
+            loadWatchlist();
         }
+    }
+
+    async function removeWatchlist(symbol) {
+        const res = await fetch(`${BASE}/api/watchlist/${symbol}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        const text = await res.text();
+        showStatus('watchStatus', text, !res.ok);
+        if (res.ok) loadWatchlist();
+    }
+
+    async function loadWatchlist() {
+        const res = await fetch(`${BASE}/api/watchlist`, { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const container = document.getElementById('watchlistItems');
+        if (!data.length) {
+            container.innerHTML = '<div class="watch-empty">관심 종목을 추가해보세요 ⭐</div>';
+            return;
+        }
+        container.innerHTML = data.map(w => `
+            <div class="watch-card">
+                <button class="watch-delete-btn" onclick="removeWatchlist('${w.symbol}')" title="삭제">✕</button>
+                <div class="watch-card-name">${w.name}</div>
+                <div class="watch-card-symbol">${w.symbol}</div>
+                <div class="watch-card-footer">
+                    <span class="badge ${w.market}">${w.market}</span>
+                    <span style="font-size:11px;color:var(--text-sub)">${new Date(w.createdAt).toLocaleDateString('ko-KR')}</span>
+                </div>
+            </div>
+        `).join('');
     }
 
     // 보유 종목 조회
@@ -397,34 +713,29 @@
         const tbody = document.getElementById('holdingsTable');
 
         if (!data.length) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">보유 종목 없음</td></tr>';
-            document.getElementById('portfolioSummary').innerHTML = '보유 종목 없음';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-sub)">보유 종목 없음</td></tr>';
+            document.getElementById('portfolioSummary').innerHTML = '<span style="color:var(--text-sub)">보유 종목 없음</span>';
             return;
         }
 
-        // 보유 종목 자동 구독
         data.forEach(h => {
             if (!subscriptions[h.symbol]) {
-                if (h.market === 'KOSPI' || h.market === 'KOSDAQ' || h.market === 'ETF') {
+                if (['KOSPI','KOSDAQ','ETF'].includes(h.market)) {
                     stompClient.send("/app/subscribe/domestic", {}, h.symbol);
                     subscriptions[h.symbol] = stompClient.subscribe(`/topic/domestic/${h.symbol}`, msg => {
-                        const d = JSON.parse(msg.body);
-                        currentPrices[h.symbol] = parseFloat(d.price);
+                        currentPrices[h.symbol] = parseFloat(JSON.parse(msg.body).price);
                         loadHoldings();
                     });
                 } else {
                     const exchange = getExchangeCode(h.market);
                     stompClient.send("/app/subscribe/overseas", {}, `${h.symbol},${exchange}`);
                     subscriptions[h.symbol] = stompClient.subscribe(`/topic/overseas/${h.symbol}`, msg => {
-                        const d = JSON.parse(msg.body);
-                        currentPrices[h.symbol] = parseFloat(d.price);
+                        currentPrices[h.symbol] = parseFloat(JSON.parse(msg.body).price);
                         loadHoldings();
                     });
                 }
             }
         });
-
-
 
         let totalBuy = 0, totalEval = 0;
         tbody.innerHTML = data.map(h => {
@@ -437,13 +748,13 @@
             totalEval += evalAmount;
             const cls = profit >= 0 ? 'price-up' : 'price-down';
             return `<tr>
-                <td><b>${h.name}</b> (${h.symbol})</td>
+                <td><b>${h.name}</b> <span style="color:var(--text-sub);font-size:12px">${h.symbol}</span></td>
                 <td><span class="badge ${h.market}">${h.market}</span></td>
-                <td>${h.quantity}주</td>
-                <td>₩${formatNumber(h.avgPrice)}</td>
-                <td>₩${formatNumber(currentPrice)}</td>
-                <td>₩${formatNumber(Math.round(evalAmount))}</td>
-                <td class="${cls}">${profit >= 0 ? '+' : ''}${profitRate}%</td>
+                <td style="font-family:'JetBrains Mono',monospace">${h.quantity}주</td>
+                <td style="font-family:'JetBrains Mono',monospace">₩${formatNumber(h.avgPrice)}</td>
+                <td style="font-family:'JetBrains Mono',monospace">₩${formatNumber(currentPrice)}</td>
+                <td style="font-family:'JetBrains Mono',monospace">₩${formatNumber(Math.round(evalAmount))}</td>
+                <td class="${cls}" style="font-family:'JetBrains Mono',monospace;font-weight:600">${profit >= 0 ? '+' : ''}${profitRate}%</td>
             </tr>`;
         }).join('');
 
@@ -451,10 +762,11 @@
         const totalRate = ((totalProfit / totalBuy) * 100).toFixed(2);
         const cls = totalProfit >= 0 ? 'price-up' : 'price-down';
         document.getElementById('portfolioSummary').innerHTML = `
-            <div style="margin-bottom:6px">총 매수금액: <b>₩${formatNumber(Math.round(totalBuy))}</b></div>
-            <div style="margin-bottom:6px">총 평가금액: <b>₩${formatNumber(Math.round(totalEval))}</b></div>
-            <div class="${cls}" style="font-size:18px;font-weight:bold">
-                ${totalProfit >= 0 ? '+' : ''}₩${formatNumber(Math.round(totalProfit))} (${totalRate}%)
+            <div style="margin-bottom:8px;font-size:13px;color:var(--text-sub)">총 매수금액 <b style="color:var(--text);font-family:'JetBrains Mono',monospace">₩${formatNumber(Math.round(totalBuy))}</b></div>
+            <div style="margin-bottom:8px;font-size:13px;color:var(--text-sub)">총 평가금액 <b style="color:var(--text);font-family:'JetBrains Mono',monospace">₩${formatNumber(Math.round(totalEval))}</b></div>
+            <div class="${cls}" style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace">
+                ${totalProfit >= 0 ? '+' : ''}₩${formatNumber(Math.round(totalProfit))}
+                <span style="font-size:14px">(${totalRate}%)</span>
             </div>
         `;
     }
@@ -465,19 +777,19 @@
         const data = await res.json();
         const tbody = document.getElementById('ordersTable');
         if (!data.length) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center">주문 내역 없음</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-sub)">주문 내역 없음</td></tr>';
             return;
         }
         tbody.innerHTML = data.map(o => {
             const time = new Date(o.createdAt).toLocaleString('ko-KR');
             const cls = o.type === 'BUY' ? 'price-up' : 'price-down';
             return `<tr>
-                <td style="font-size:12px">${time}</td>
-                <td><b>${o.name}</b> (${o.symbol})</td>
-                <td class="${cls}"><b>${o.type === 'BUY' ? '매수' : '매도'}</b></td>
-                <td>${o.quantity}주</td>
-                <td>₩${formatNumber(o.price)}</td>
-                <td>₩${formatNumber(o.price * o.quantity)}</td>
+                <td style="font-size:12px;color:var(--text-sub)">${time}</td>
+                <td><b>${o.name}</b> <span style="color:var(--text-sub);font-size:12px">${o.symbol}</span></td>
+                <td class="${cls}" style="font-weight:700">${o.type === 'BUY' ? '매수' : '매도'}</td>
+                <td style="font-family:'JetBrains Mono',monospace">${o.quantity}주</td>
+                <td style="font-family:'JetBrains Mono',monospace">₩${formatNumber(o.price)}</td>
+                <td style="font-family:'JetBrains Mono',monospace">₩${formatNumber(o.price * o.quantity)}</td>
             </tr>`;
         }).join('');
     }
