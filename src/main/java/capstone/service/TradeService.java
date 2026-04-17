@@ -44,7 +44,7 @@ public class TradeService {
         if (existingHolding.isPresent()) {
             // 기존 보유 종목이면 평균단가 재계산
             Holding holding = existingHolding.get();
-            int newQuantity = holding.getQuantity() + dto.getQuantity();
+            Long newQuantity = holding.getQuantity() + dto.getQuantity();
             double newAvgPrice = ((holding.getAvgPrice() * holding.getQuantity()) + totalPrice) / newQuantity;
             holding.setQuantity(newQuantity);
             holding.setAvgPrice(newAvgPrice);

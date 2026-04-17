@@ -21,6 +21,6 @@ public class Holding {
     private String symbol;      // 종목코드
     private String name;        // 종목명
     private String market;      // 시장
-    private Integer quantity;   // 보유수량
+    private Long quantity;   // 보유수량
     private Double avgPrice;    // 평균매수가
 }

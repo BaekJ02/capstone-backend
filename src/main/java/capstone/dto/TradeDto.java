@@ -8,6 +8,6 @@ public class TradeDto {
     private String name;        // 종목명
     private String market;      // 시장
     private String type;        // BUY or SELL
-    private Integer quantity;   // 주문수량
+    private Long quantity;   // 주문수량
     private Double price;       // 체결가
 }

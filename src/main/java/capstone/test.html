@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <title>캡스톤 주식 테스트</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.0/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
@@ -182,22 +183,20 @@
     const stompClient = Stomp.over(socket);
     const subscriptions = {};
     let currentPrices = {};
+    let holdingsData = [];
 
     stompClient.connect({}, () => console.log('WebSocket 연결 성공'));
 
-    // 거래소 코드 매핑
     function getExchangeCode(market) {
         if (market === 'NASDAQ') return 'NAS';
         if (market === 'NYSE') return 'NYS';
         return 'AMS';
     }
 
-    // 숫자 포맷
     function formatNumber(n) {
         return Number(n).toLocaleString();
     }
 
-    // 상태 메시지
     function showStatus(id, msg, isError = false) {
         const el = document.getElementById(id);
         el.className = `status ${isError ? 'error' : 'success'}`;
@@ -205,7 +204,6 @@
         setTimeout(() => el.textContent = '', 3000);
     }
 
-    // 회원가입
     async function signup() {
         const res = await fetch(`${BASE}/api/users/signup`, {
             method: 'POST',
@@ -220,7 +218,6 @@
         showStatus('authStatus', text, !res.ok);
     }
 
-    // 로그인
     async function login() {
         const res = await fetch(`${BASE}/api/users/login`, {
             method: 'POST',
@@ -242,14 +239,12 @@
         }
     }
 
-    // 로그아웃
     async function logout() {
         await fetch(`${BASE}/api/users/logout`, { method: 'POST', credentials: 'include' });
         document.getElementById('authCard').classList.remove('hidden');
         document.getElementById('mainContent').classList.add('hidden');
     }
 
-    // 내 정보 조회
     async function loadMyInfo() {
         const res = await fetch(`${BASE}/api/users/me`, { credentials: 'include' });
         const data = await res.json();
@@ -257,14 +252,12 @@
         document.getElementById('userBalance').textContent = formatNumber(data.balance);
     }
 
-    // 잔고 업데이트
     async function updateBalance() {
         const res = await fetch(`${BASE}/api/trade/balance`, { credentials: 'include' });
         const balance = await res.json();
         document.getElementById('userBalance').textContent = formatNumber(balance);
     }
 
-    // 국내 주식 검색
     function searchDomestic() {
         const keyword = document.getElementById('domesticKeyword').value;
         if (keyword.length < 1) { document.getElementById('domesticSearchResults').innerHTML = ''; return; }
@@ -281,7 +274,6 @@
             });
     }
 
-    // 미국 주식 검색
     function searchOverseas() {
         const keyword = document.getElementById('overseasKeyword').value;
         if (keyword.length < 1) { document.getElementById('overseasSearchResults').innerHTML = ''; return; }
@@ -298,7 +290,6 @@
             });
     }
 
-    // 국내 주식 선택
     function selectDomestic(symbol, name, market) {
         document.getElementById('domesticKeyword').value = name;
         document.getElementById('domesticSearchResults').innerHTML = '';
@@ -318,10 +309,10 @@
             `;
             document.getElementById('tradePrice').value = data.price;
             updateTradeTotal();
+            updateHoldingsTable(holdingsData);
         });
     }
 
-    // 미국 주식 선택
     function selectOverseas(symbol, name, market) {
         document.getElementById('overseasKeyword').value = name;
         document.getElementById('overseasSearchResults').innerHTML = '';
@@ -342,17 +333,16 @@
             `;
             document.getElementById('tradePrice').value = data.price;
             updateTradeTotal();
+            updateHoldingsTable(holdingsData);
         });
     }
 
-    // 매매 폼 설정
     function setTradeForm(symbol, name, market) {
         document.getElementById('tradeSymbol').value = symbol;
         document.getElementById('tradeName').value = name;
         document.getElementById('tradeMarket').value = market;
     }
 
-    // 예상 금액 업데이트
     function updateTradeTotal() {
         const price = parseFloat(document.getElementById('tradePrice').value) || 0;
         const qty = parseInt(document.getElementById('tradeQuantity').value) || 0;
@@ -361,7 +351,6 @@
     document.getElementById('tradePrice')?.addEventListener('input', updateTradeTotal);
     document.getElementById('tradeQuantity')?.addEventListener('input', updateTradeTotal);
 
-    // 매매
     async function trade(type) {
         const dto = {
             symbol: document.getElementById('tradeSymbol').value,
@@ -389,10 +378,10 @@
         }
     }
 
-    // 보유 종목 조회
     async function loadHoldings() {
         const res = await fetch(`${BASE}/api/trade/holdings`, { credentials: 'include' });
         const data = await res.json();
+        holdingsData = data;
         const tbody = document.getElementById('holdingsTable');
 
         if (!data.length) {
@@ -401,6 +390,34 @@
             return;
         }
 
+        // 보유 종목 자동 구독
+        data.forEach(h => {
+            if (!subscriptions[h.symbol]) {
+                if (h.market === 'KOSPI' || h.market === 'KOSDAQ' || h.market === 'ETF') {
+                    stompClient.send("/app/subscribe/domestic", {}, h.symbol);
+                    subscriptions[h.symbol] = stompClient.subscribe(`/topic/domestic/${h.symbol}`, msg => {
+                        const d = JSON.parse(msg.body);
+                        currentPrices[h.symbol] = parseFloat(d.price);
+                        updateHoldingsTable(holdingsData);
+                    });
+                } else {
+                    const exchange = getExchangeCode(h.market);
+                    stompClient.send("/app/subscribe/overseas", {}, `${h.symbol},${exchange}`);
+                    subscriptions[h.symbol] = stompClient.subscribe(`/topic/overseas/${h.symbol}`, msg => {
+                        const d = JSON.parse(msg.body);
+                        currentPrices[h.symbol] = parseFloat(d.price);
+                        updateHoldingsTable(holdingsData);
+                    });
+                }
+            }
+        });
+
+        updateHoldingsTable(data);
+    }
+
+    function updateHoldingsTable(data) {
+        if (!data.length) return;
+        const tbody = document.getElementById('holdingsTable');
         let totalBuy = 0, totalEval = 0;
         tbody.innerHTML = data.map(h => {
             const currentPrice = currentPrices[h.symbol] || h.avgPrice;
@@ -434,7 +451,6 @@
         `;
     }
 
-    // 주문 내역 조회
     async function loadOrders() {
         const res = await fetch(`${BASE}/api/trade/orders`, { credentials: 'include' });
         const data = await res.json();
@@ -457,7 +473,6 @@
         }).join('');
     }
 
-    // 탭 전환
     function showTab(tab) {
         document.getElementById('holdingsTab').classList.toggle('hidden', tab !== 'holdings');
         document.getElementById('ordersTab').classList.toggle('hidden', tab !== 'orders');

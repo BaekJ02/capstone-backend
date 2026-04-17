@@ -402,6 +402,30 @@
             return;
         }
 
+        // 보유 종목 자동 구독
+        data.forEach(h => {
+            if (!subscriptions[h.symbol]) {
+                if (h.market === 'KOSPI' || h.market === 'KOSDAQ' || h.market === 'ETF') {
+                    stompClient.send("/app/subscribe/domestic", {}, h.symbol);
+                    subscriptions[h.symbol] = stompClient.subscribe(`/topic/domestic/${h.symbol}`, msg => {
+                        const d = JSON.parse(msg.body);
+                        currentPrices[h.symbol] = parseFloat(d.price);
+                        loadHoldings();
+                    });
+                } else {
+                    const exchange = getExchangeCode(h.market);
+                    stompClient.send("/app/subscribe/overseas", {}, `${h.symbol},${exchange}`);
+                    subscriptions[h.symbol] = stompClient.subscribe(`/topic/overseas/${h.symbol}`, msg => {
+                        const d = JSON.parse(msg.body);
+                        currentPrices[h.symbol] = parseFloat(d.price);
+                        loadHoldings();
+                    });
+                }
+            }
+        });
+
+
+
         let totalBuy = 0, totalEval = 0;
         tbody.innerHTML = data.map(h => {
             const currentPrice = currentPrices[h.symbol] || h.avgPrice;
