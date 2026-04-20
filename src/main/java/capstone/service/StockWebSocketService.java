@@ -44,7 +44,7 @@ public class StockWebSocketService {
         }
     }
 
-    // 미국 주식 - 시간대별 처리 (일단 REST API 유지, 추후 웹소켓 추가)
+    // 미국 주식 - 정규장이면 KIS 웹소켓, 아니면 REST API
     @Scheduled(fixedDelay = 3000, initialDelay = 2000)
     public void sendOverseasStockPrices() {
         for (String symbolWithExchange : subscriptionService.getOverseasSymbols()) {
@@ -52,8 +52,12 @@ public class StockWebSocketService {
                 String[] parts = symbolWithExchange.split(",");
                 String symbol = parts[0];
                 String exchange = parts.length > 1 ? parts[1] : "NAS";
-                StockPriceDto price = stockService.getOverseasStockPrice(symbol, exchange);
-                messagingTemplate.convertAndSend("/topic/overseas/" + symbol, price);
+                if (marketTimeService.isUsMarketOpen()) {
+                    kisWebSocketClient.subscribeOverseas(symbolWithExchange);
+                } else {
+                    StockPriceDto price = stockService.getOverseasStockPrice(symbol, exchange);
+                    messagingTemplate.convertAndSend("/topic/overseas/" + symbol, price);
+                }
                 Thread.sleep(100);
             } catch (Exception e) {
                 log.error("해외주식 조회 실패: {}", e.getMessage());

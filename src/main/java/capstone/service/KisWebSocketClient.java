@@ -27,6 +27,7 @@ public class KisWebSocketClient {
 
     private WebSocketClient wsClient;
     private final Set<String> subscribedSymbols = ConcurrentHashMap.newKeySet();
+    private final Set<String> subscribedOverseasSymbols = ConcurrentHashMap.newKeySet();
     private boolean connected = false;
 
     @PostConstruct
@@ -45,6 +46,9 @@ public class KisWebSocketClient {
                     log.info("KIS 웹소켓 연결 성공");
                     for (String symbol : subscribedSymbols) {
                         sendSubscribe(symbol, approvalKey, true);
+                    }
+                    for (String symbolWithExchange : subscribedOverseasSymbols) {
+                        sendOverseasSubscribe(symbolWithExchange, approvalKey, true);
                     }
                 }
 
@@ -92,12 +96,40 @@ public class KisWebSocketClient {
         }
     }
 
+    public void subscribeOverseas(String symbolWithExchange) {
+        subscribedOverseasSymbols.add(symbolWithExchange);
+        if (connected) {
+            sendOverseasSubscribe(symbolWithExchange, kisAuthService.getApprovalKey(), true);
+        }
+    }
+
+    public void unsubscribeOverseas(String symbolWithExchange) {
+        subscribedOverseasSymbols.remove(symbolWithExchange);
+        if (connected) {
+            sendOverseasSubscribe(symbolWithExchange, kisAuthService.getApprovalKey(), false);
+        }
+    }
+
     private void sendSubscribe(String symbol, String approvalKey, boolean subscribe) {
         String trType = subscribe ? "1" : "2";
         String message = String.format(
             "{\"header\":{\"approval_key\":\"%s\",\"custtype\":\"P\",\"tr_type\":\"%s\",\"content-type\":\"utf-8\"}," +
             "\"body\":{\"input\":{\"tr_id\":\"H0STCNT0\",\"tr_key\":\"%s\"}}}",
             approvalKey, trType, symbol
+        );
+        wsClient.send(message);
+    }
+
+    private void sendOverseasSubscribe(String symbolWithExchange, String approvalKey, boolean subscribe) {
+        String trType = subscribe ? "1" : "2";
+        String[] parts = symbolWithExchange.split(",");
+        String symbol = parts[0];
+        String exchange = parts.length > 1 ? parts[1] : "NAS";
+        String trKey = "D" + exchange + symbol;
+        String message = String.format(
+            "{\"header\":{\"approval_key\":\"%s\",\"custtype\":\"P\",\"tr_type\":\"%s\",\"content-type\":\"utf-8\"}," +
+            "\"body\":{\"input\":{\"tr_id\":\"HDFSCNT0\",\"tr_key\":\"%s\"}}}",
+            approvalKey, trType, trKey
         );
         wsClient.send(message);
     }
@@ -109,6 +141,7 @@ public class KisWebSocketClient {
             String[] parts = message.split("\\|");
             if (parts.length < 4) return;
 
+            String trId = parts[1];
             String[] fields = parts[3].split("\\^");
             if (fields.length < 6) return;
 
@@ -123,7 +156,13 @@ public class KisWebSocketClient {
             dto.setChange(change);
             dto.setChangePercent(changePercent);
 
-            messagingTemplate.convertAndSend("/topic/domestic/" + symbol, dto);
+            if ("HDFSCNT0".equals(trId)) {
+                String realSymbol = symbol.length() > 4 ? symbol.substring(4) : symbol;
+                dto.setSymbol(realSymbol);
+                messagingTemplate.convertAndSend("/topic/overseas/" + realSymbol, dto);
+            } else {
+                messagingTemplate.convertAndSend("/topic/domestic/" + symbol, dto);
+            }
 
         } catch (Exception e) {
             log.error("메시지 파싱 오류: {}", e.getMessage());
