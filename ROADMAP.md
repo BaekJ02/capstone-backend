@@ -36,12 +36,8 @@
 - JwtTokenProvider, JwtAuthenticationFilter, SecurityConfig 구현
 - 세션 방식 → JWT Stateless 방식으로 전환
 - 서버 재시작해도 로그인 유지
-
----
-
-## ⏸️ 보류 항목
-
-- 미국주식 상세정보 재무데이터 (PER, EPS, 시가총액 등) → KIS API 미제공으로 Yahoo Finance 등 외부 API 연동 필요, 추후 구현 예정
+- FMP API 연동 미국주식 재무데이터 (PER, PBR, 시가총액, 배당금, 52주 최고/최저)
+- API URL: https://financialmodelingprep.com/stable/profile, /ratios-ttm
 
 ---
 
@@ -49,11 +45,10 @@
 
 > 기본 주식 사이트로서 갖춰야 할 핵심 기능들
 
-- [ ] 내일 정규장 때 호가창 + 체결내역 실시간 동작 확인
 - [ ] 오늘 밤 22:30 미국주식 웹소켓 실시간 테스트
-- [ ] 미국주식 재무데이터 (Yahoo Finance 연동)
+- [ ] 내일 정규장 때 호가창 + 체결내역 실시간 동작 재확인
+- [ ] API 응답 형식 통일 (선택사항)
 - [ ] MySQL 교체 (배포 단계에서)
-- [ ] OAuth2 소셜 로그인 (구글/카카오 - 여유되면)
 
 ---
 

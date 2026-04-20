@@ -401,6 +401,31 @@
             </div>
         </div>
 
+        <!-- 판매수익 -->
+        <div class="card">
+            <h3>💹 판매수익</h3>
+            <div id="profitTabs" class="tab" style="border:none;padding:0;margin-bottom:16px">
+                <button class="tab-btn active" data-period="DAY"   onclick="loadProfit('DAY')">오늘</button>
+                <button class="tab-btn"        data-period="WEEK"  onclick="loadProfit('WEEK')">1주일</button>
+                <button class="tab-btn"        data-period="MONTH" onclick="loadProfit('MONTH')">1개월</button>
+                <button class="tab-btn"        data-period="YEAR"  onclick="loadProfit('YEAR')">1년</button>
+                <button class="tab-btn"        data-period="ALL"   onclick="loadProfit('ALL')">전체</button>
+            </div>
+            <div id="profitTotal" style="font-size:28px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:16px;color:var(--text-sub)">₩0</div>
+            <table>
+                <thead>
+                <tr>
+                    <th>종목</th>
+                    <th>매도가</th>
+                    <th>평균매수가</th>
+                    <th>수량</th>
+                    <th>수익</th>
+                </tr>
+                </thead>
+                <tbody id="profitTable"><tr><td colspan="5" style="text-align:center;color:var(--text-sub)">데이터 없음</td></tr></tbody>
+            </table>
+        </div>
+
         <!-- 탭: 보유종목 / 주문내역 -->
         <div class="card">
             <div class="tab">
@@ -455,6 +480,8 @@
     const subscriptions = {};
     let currentPrices = {};
     let holdingsData = [];
+    let domSymbol = null, domMarket = null;
+    let ovsSymbol = null, ovsMarket = null, ovsExchange = null;
 
     stompClient.connect({}, () => console.log('WebSocket 연결 성공'));
 
@@ -470,6 +497,7 @@
                 document.getElementById('mainContent').classList.remove('hidden');
                 loadHoldings();
                 loadWatchlist();
+                loadProfit('DAY');
                 return;
             }
             localStorage.removeItem('token');
@@ -541,6 +569,7 @@
             document.getElementById('mainContent').classList.remove('hidden');
             loadHoldings();
             loadWatchlist();
+            loadProfit('DAY');
         } else {
             const text = await res.text();
             showStatus('authStatus', text, true);
@@ -625,6 +654,7 @@
 
     // 국내 주식 선택
     function selectDomestic(symbol, name, market) {
+        domSymbol = symbol; domMarket = market;
         document.getElementById('domesticKeyword').value = name;
         document.getElementById('domesticSearchResults').innerHTML = '';
         setTradeForm(symbol, name, market);
@@ -640,6 +670,7 @@
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                     <b style="font-size:14px">${name}</b>
                     <span class="badge ${market}">${market}</span>
+                    <button onclick="clearDomestic()" style="background:transparent;border:none;color:var(--text-sub);cursor:pointer;font-size:16px;padding:2px 6px;margin:0;line-height:1" title="선택 취소">✕</button>
                 </div>
                 <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace" class="${cls}">₩${formatNumber(data.price)}</div>
                 <div class="${cls}" style="font-size:12px;margin-top:4px">${change >= 0 ? '▲' : '▼'} ${data.change} (${data.changePercent}%)</div>
@@ -673,14 +704,14 @@
 
     // 미국 주식 선택
     function selectOverseas(symbol, name, market) {
+        ovsSymbol = symbol; ovsMarket = market; ovsExchange = getExchangeCode(market);
         document.getElementById('overseasKeyword').value = name;
         document.getElementById('overseasSearchResults').innerHTML = '';
         setTradeForm(symbol, name, market);
         document.getElementById('orderBookCard').style.display = 'none';
 
         if (subscriptions['overseas']) subscriptions['overseas'].unsubscribe();
-        const exchange = getExchangeCode(market);
-        stompClient.send("/app/subscribe/overseas", {}, `${symbol},${exchange}`);
+        stompClient.send("/app/subscribe/overseas", {}, `${symbol},${ovsExchange}`);
         subscriptions['overseas'] = stompClient.subscribe(`/topic/overseas/${symbol}`, msg => {
             const data = JSON.parse(msg.body);
             currentPrices[symbol] = parseFloat(data.price);
@@ -690,6 +721,7 @@
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                     <b style="font-size:14px">${name}</b>
                     <span class="badge ${market}">${market}</span>
+                    <button onclick="clearOverseas()" style="background:transparent;border:none;color:var(--text-sub);cursor:pointer;font-size:16px;padding:2px 6px;margin:0;line-height:1" title="선택 취소">✕</button>
                 </div>
                 <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace" class="${cls}">$${data.price}</div>
                 <div class="${cls}" style="font-size:12px;margin-top:4px">${change >= 0 ? '▲' : '▼'} ${data.change} (${data.changePercent}%)</div>
@@ -697,6 +729,31 @@
             document.getElementById('tradePrice').value = data.price;
             updateTradeTotal();
         });
+    }
+
+    function clearDomestic() {
+        if (domSymbol) {
+            if (subscriptions['domestic']) { subscriptions['domestic'].unsubscribe(); delete subscriptions['domestic']; }
+            if (subscriptions['orderbook']) { subscriptions['orderbook'].unsubscribe(); delete subscriptions['orderbook']; }
+            if (subscriptions['tradetick']) { subscriptions['tradetick'].unsubscribe(); delete subscriptions['tradetick']; }
+            stompClient.send("/app/unsubscribe/domestic", {}, domSymbol);
+            domSymbol = null; domMarket = null;
+        }
+        document.getElementById('domesticKeyword').value = '';
+        document.getElementById('domesticSearchResults').innerHTML = '';
+        document.getElementById('domesticPriceCard').textContent = '종목을 선택해주세요';
+        document.getElementById('orderBookCard').style.display = 'none';
+    }
+
+    function clearOverseas() {
+        if (ovsSymbol) {
+            if (subscriptions['overseas']) { subscriptions['overseas'].unsubscribe(); delete subscriptions['overseas']; }
+            stompClient.send("/app/unsubscribe/overseas", {}, `${ovsSymbol},${ovsExchange}`);
+            ovsSymbol = null; ovsMarket = null; ovsExchange = null;
+        }
+        document.getElementById('overseasKeyword').value = '';
+        document.getElementById('overseasSearchResults').innerHTML = '';
+        document.getElementById('overseasPriceCard').textContent = '종목을 선택해주세요';
     }
 
     function renderOrderBook(data, symbol) {
@@ -959,6 +1016,38 @@
                 <td style="font-family:'JetBrains Mono',monospace">${o.quantity}주</td>
                 <td style="font-family:'JetBrains Mono',monospace">₩${formatNumber(o.price)}</td>
                 <td style="font-family:'JetBrains Mono',monospace">₩${formatNumber(o.price * o.quantity)}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    // 판매수익 조회
+    async function loadProfit(period) {
+        document.querySelectorAll('#profitTabs .tab-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.period === period);
+        });
+        const res = await fetch(`${BASE}/api/trade/profit?period=${period}`, { headers: authHeaders() });
+        if (!res.ok) return;
+        const data = await res.json();
+
+        const totalEl = document.getElementById('profitTotal');
+        const cls = data.totalProfit >= 0 ? 'price-up' : 'price-down';
+        totalEl.className = cls;
+        totalEl.style.fontSize = '28px'; totalEl.style.fontWeight = '700'; totalEl.style.fontFamily = "'JetBrains Mono',monospace"; totalEl.style.marginBottom = '16px';
+        totalEl.textContent = (data.totalProfit >= 0 ? '+' : '') + '₩' + formatNumber(Math.round(data.totalProfit));
+
+        const tbody = document.getElementById('profitTable');
+        if (!data.profitList.length) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-sub)">매도 내역 없음</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.profitList.map(item => {
+            const pc = item.profit >= 0 ? 'price-up' : 'price-down';
+            return `<tr>
+                <td><b>${item.name}</b> <span style="color:var(--text-sub);font-size:12px">${item.symbol}</span></td>
+                <td style="font-family:'JetBrains Mono',monospace">₩${formatNumber(item.sellPrice)}</td>
+                <td style="font-family:'JetBrains Mono',monospace">${item.avgPrice != null ? '₩' + formatNumber(item.avgPrice) : '-'}</td>
+                <td style="font-family:'JetBrains Mono',monospace">${item.quantity}주</td>
+                <td class="${pc}" style="font-family:'JetBrains Mono',monospace;font-weight:600">${item.profit >= 0 ? '+' : ''}₩${formatNumber(Math.round(item.profit))}</td>
             </tr>`;
         }).join('');
     }

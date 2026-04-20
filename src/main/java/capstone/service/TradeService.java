@@ -3,6 +3,8 @@ package capstone.service;
 import capstone.domain.Holding;
 import capstone.domain.Order;
 import capstone.domain.User;
+import capstone.dto.ProfitDto;
+import capstone.dto.ProfitItemDto;
 import capstone.dto.TradeDto;
 import capstone.repository.HoldingRepository;
 import capstone.repository.OrderRepository;
@@ -11,8 +13,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -116,6 +120,7 @@ public class TradeService {
         order.setType("SELL");
         order.setQuantity(dto.getQuantity());
         order.setPrice(dto.getPrice());
+        order.setAvgPrice(holding.getAvgPrice());
         orderRepository.save(order);
 
         return "매도 완료";
@@ -138,5 +143,48 @@ public class TradeService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("존재하지 않는 유저입니다."));
         return user.getBalance();
+    }
+
+    // 실현손익 조회
+    public ProfitDto getProfitSummary(Long userId, String period) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("존재하지 않는 유저입니다."));
+
+        List<Order> orders;
+        if ("ALL".equalsIgnoreCase(period)) {
+            orders = orderRepository.findByUserAndTypeOrderByCreatedAtDesc(user, "SELL");
+        } else {
+            LocalDateTime after = switch (period.toUpperCase()) {
+                case "DAY"   -> LocalDateTime.now().toLocalDate().atStartOfDay();
+                case "WEEK"  -> LocalDateTime.now().minusDays(7);
+                case "MONTH" -> LocalDateTime.now().minusDays(30);
+                case "YEAR"  -> LocalDateTime.now().minusDays(365);
+                default      -> LocalDateTime.now().toLocalDate().atStartOfDay();
+            };
+            orders = orderRepository.findByUserAndTypeAndCreatedAtAfterOrderByCreatedAtDesc(user, "SELL", after);
+        }
+
+        List<ProfitItemDto> profitList = orders.stream().map(o -> {
+            ProfitItemDto item = new ProfitItemDto();
+            item.setSymbol(o.getSymbol());
+            item.setName(o.getName());
+            item.setSellPrice(o.getPrice());
+            item.setAvgPrice(o.getAvgPrice());
+            item.setQuantity(o.getQuantity());
+            item.setCreatedAt(o.getCreatedAt());
+            double profit = (o.getAvgPrice() != null)
+                    ? (o.getPrice() - o.getAvgPrice()) * o.getQuantity()
+                    : 0.0;
+            item.setProfit(profit);
+            return item;
+        }).collect(Collectors.toList());
+
+        double totalProfit = profitList.stream().mapToDouble(ProfitItemDto::getProfit).sum();
+
+        ProfitDto dto = new ProfitDto();
+        dto.setPeriod(period.toUpperCase());
+        dto.setTotalProfit(totalProfit);
+        dto.setProfitList(profitList);
+        return dto;
     }
 }

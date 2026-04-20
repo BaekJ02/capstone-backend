@@ -45,7 +45,13 @@ src/main/java/capstone/
 kis.api.key=YOUR_KEY
 kis.api.secret=YOUR_SECRET
 jwt.secret=YOUR_JWT_SECRET
+fmp.api.key=YOUR_FMP_KEY
 ```
+
+**FMP (Financial Modeling Prep)** — 미국주식 재무데이터 전용:
+- `GET /stable/profile?symbol={symbol}&apikey={key}` → 시가총액(`marketCap`), 베타(`beta`), 52주 범위(`range`: `"low-high"` split), 배당금(`dividendYield` → fallback `lastDividend`), 거래량(`volume`)
+- `GET /stable/ratios-ttm?symbol={symbol}&apikey={key}` → PER(`priceToEarningsRatioTTM`), PBR(`priceToBookRatioTTM`)
+- PER, PBR은 `formatRatio()`로 소수점 2자리 반올림. null·빈값·파싱 불가 시 빈 문자열 반환
 
 ### Authentication
 

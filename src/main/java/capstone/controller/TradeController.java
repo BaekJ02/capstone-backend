@@ -50,4 +50,9 @@ public class TradeController {
     public ResponseEntity<?> getBalance() {
         return ResponseEntity.ok(tradeService.getBalance(getCurrentUserId()));
     }
+
+    @GetMapping("/profit")
+    public ResponseEntity<?> getProfit(@RequestParam(defaultValue = "ALL") String period) {
+        return ResponseEntity.ok(tradeService.getProfitSummary(getCurrentUserId(), period));
+    }
 }

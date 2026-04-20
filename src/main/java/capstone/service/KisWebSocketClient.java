@@ -14,9 +14,11 @@ import org.java_websocket.handshake.ServerHandshake;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @Service
@@ -33,6 +35,7 @@ public class KisWebSocketClient {
     private final Set<String> subscribedSymbols = ConcurrentHashMap.newKeySet();
     private final Set<String> subscribedOverseasSymbols = ConcurrentHashMap.newKeySet();
     private boolean connected = false;
+    private final AtomicInteger hdfscnt0LogCount = new AtomicInteger(0);
 
     @PostConstruct
     public void init() {
@@ -161,15 +164,14 @@ public class KisWebSocketClient {
                 handlePrice(fields);
                 handleTradeTick(fields);
             } else if ("HDFSCNT0".equals(trId)) {
-                if (fields.length < 6) return;
-                String symbol = fields[0];
-                String realSymbol = symbol.length() > 4 ? symbol.substring(4) : symbol;
+                if (fields.length < 15) return;
+                String symbol = fields[1];
                 StockPriceDto dto = new StockPriceDto();
-                dto.setSymbol(realSymbol);
-                dto.setPrice(fields[2]);
-                dto.setChange(fields[4]);
-                dto.setChangePercent(fields[5]);
-                messagingTemplate.convertAndSend("/topic/overseas/" + realSymbol, dto);
+                dto.setSymbol(symbol);
+                dto.setPrice(fields[11]);
+                dto.setChange(fields[13]);
+                dto.setChangePercent(fields[14]);
+                messagingTemplate.convertAndSend("/topic/overseas/" + symbol, dto);
             }
 
         } catch (Exception e) {

@@ -22,8 +22,9 @@ public class Order {
     private String symbol;           // 종목코드
     private String name;             // 종목명
     private String type;             // BUY or SELL
-    private Long quantity;        // 주문수량
+    private Long quantity;           // 주문수량
     private Double price;            // 체결가
+    private Double avgPrice;         // 매도 시 평균매수가 (SELL 전용)
     private LocalDateTime createdAt; // 주문시간
 
     @PrePersist
