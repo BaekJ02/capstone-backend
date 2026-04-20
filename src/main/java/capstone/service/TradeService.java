@@ -16,11 +16,14 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class TradeService {
+
+    private static final Set<String> OVERSEAS_MARKETS = Set.of("NASDAQ", "NYSE", "AMEX", "OTHER");
 
     private final UserRepository userRepository;
     private final HoldingRepository holdingRepository;
@@ -35,14 +38,19 @@ public class TradeService {
                 .orElseThrow(() -> new RuntimeException("존재하지 않는 유저입니다."));
 
         double totalPrice = dto.getPrice() * dto.getQuantity();
+        boolean overseas = OVERSEAS_MARKETS.contains(dto.getMarket());
 
-        // 잔고 확인
-        if (user.getBalance() < totalPrice) {
-            throw new RuntimeException("잔고가 부족합니다.");
+        if (overseas) {
+            if (user.getDollarBalance() < totalPrice) {
+                throw new RuntimeException("달러 잔고가 부족합니다.");
+            }
+            user.setDollarBalance(user.getDollarBalance() - totalPrice);
+        } else {
+            if (user.getBalance() < totalPrice) {
+                throw new RuntimeException("잔고가 부족합니다.");
+            }
+            user.setBalance(user.getBalance() - totalPrice);
         }
-
-        // 잔고 차감
-        user.setBalance(user.getBalance() - totalPrice);
         userRepository.save(user);
 
         // 보유종목 업데이트
@@ -97,9 +105,13 @@ public class TradeService {
         }
 
         double totalPrice = dto.getPrice() * dto.getQuantity();
+        boolean overseas = OVERSEAS_MARKETS.contains(dto.getMarket());
 
-        // 잔고 증가
-        user.setBalance(user.getBalance() + totalPrice);
+        if (overseas) {
+            user.setDollarBalance(user.getDollarBalance() + totalPrice);
+        } else {
+            user.setBalance(user.getBalance() + totalPrice);
+        }
         userRepository.save(user);
 
         // 보유종목 업데이트

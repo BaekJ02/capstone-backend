@@ -25,4 +25,7 @@ public class User {
 
     @Column(nullable = false)
     private Double balance = 10000000.0; // 초기 가상 잔고 1000만원
+
+    @Column(nullable = false)
+    private Double dollarBalance = 0.0; // 달러 잔고
 }

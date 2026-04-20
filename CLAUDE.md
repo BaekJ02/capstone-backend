@@ -46,6 +46,7 @@ kis.api.key=YOUR_KEY
 kis.api.secret=YOUR_SECRET
 jwt.secret=YOUR_JWT_SECRET
 fmp.api.key=YOUR_FMP_KEY
+koreaexim.api.key=YOUR_EXIM_KEY
 ```
 
 **FMP (Financial Modeling Prep)** — 미국주식 재무데이터 전용:
@@ -101,6 +102,12 @@ STOMP over SockJS. Clients send to `/app/subscribe/domestic` or `/app/subscribe/
 - 매매 수량 유효성 검사: 프론트(trade 함수) + 백엔드(TradeService.buy/sell) 모두 quantity < 1 차단
 - 보유종목 실시간 DOM 업데이트: WebSocket 수신 시 `loadHoldings()` 대신 `updateHoldingRow(symbol)`으로 해당 행만 갱신
 - Spring Security + JWT: `JwtTokenProvider`, `JwtAuthenticationFilter`, `SecurityConfig` 구현. 세션 방식 완전 제거, Stateless 인증
+- 실현손익 조회: `Order.avgPrice` 저장, `GET /api/trade/profit?period=` (DAY/WEEK/MONTH/YEAR/ALL), `ProfitDto`, `ProfitItemDto`
+- 환율: `ExchangeRateService` (한국수출입은행 API, 주말/공휴일 최대 5일 이전 재시도, 1시간 캐싱 `@Scheduled`)
+- 환전 API: `ExchangeController` — `GET /api/exchange/rate`, `POST /api/exchange/krw-to-usd`, `POST /api/exchange/usd-to-krw`
+- 달러 잔고: `User.dollarBalance`, 미국주식 매매 시 dollarBalance 차감/추가 (`TradeService.OVERSEAS_MARKETS`)
+- 전체 계좌 현황: 원화 잔고 + 달러 잔고(KRW 환산) + 보유주식 평가금액 합산, `updateTotalAssets()` (async, /api/users/me + /api/exchange/rate 실시간 조회)
+- 미국주식 금액 $ 표시: `isOverseas(market)` / `isOverseasSymbol(symbol)` 분기, `fmtMoney()` 헬퍼
 
 ## Key Design Notes
 

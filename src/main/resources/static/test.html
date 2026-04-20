@@ -296,8 +296,11 @@
             <div class="balance-box">
                 <div class="balance-label">안녕하세요 👋</div>
                 <div style="font-size:18px;font-weight:700;color:white;margin-bottom:8px"><span id="userName"></span>님</div>
-                <div class="balance-label">가상 잔고</div>
+                <div class="balance-label">가상 잔고 (KRW)</div>
                 <div class="balance-amount">₩<span id="userBalance">0</span></div>
+                <div class="balance-label" style="margin-top:10px">달러 잔고 (USD)</div>
+                <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;color:#4fa3e0;margin:4px 0">$<span id="userDollarBalance">0.00</span></div>
+                <div class="balance-sub" style="margin-top:4px">환율: <span id="currentRate">-</span> KRW/USD</div>
                 <div style="margin-top:14px">
                     <button class="btn-secondary" onclick="logout()">로그아웃</button>
                 </div>
@@ -305,6 +308,48 @@
             <div class="card" style="margin:0">
                 <h3>📊 포트폴리오 요약</h3>
                 <div id="portfolioSummary" style="color:var(--text-sub);font-size:13px">보유 종목을 불러오는 중...</div>
+            </div>
+        </div>
+
+        <!-- 전체 계좌 현황 -->
+        <div class="card" style="margin-bottom:14px">
+            <h3>💼 전체 계좌 현황</h3>
+            <div class="grid-3" style="font-size:13px">
+                <div>
+                    <div class="balance-label">원화 잔고</div>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;margin-top:4px">₩<span id="accountKrw">0</span></div>
+                </div>
+                <div>
+                    <div class="balance-label">달러 잔고 (원화 환산)</div>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;margin-top:4px">₩<span id="accountDollarInKrw">0</span></div>
+                </div>
+                <div>
+                    <div class="balance-label">보유주식 평가금액</div>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;margin-top:4px">₩<span id="accountHoldings">0</span></div>
+                </div>
+            </div>
+            <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+                <div class="balance-label">총 자산</div>
+                <div style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;color:white;margin-top:4px">₩<span id="accountTotal">0</span></div>
+            </div>
+        </div>
+
+        <!-- 환전 -->
+        <div class="card" style="margin-bottom:14px">
+            <h3>💱 환전</h3>
+            <div class="grid">
+                <div>
+                    <h4>🇰🇷 원화 → 달러</h4>
+                    <input id="krwToUsdAmount" type="number" placeholder="환전할 원화 금액 (₩)" />
+                    <button class="btn-primary" onclick="exchangeKrwToUsd()">환전</button>
+                    <div id="krwToUsdStatus"></div>
+                </div>
+                <div>
+                    <h4>🇺🇸 달러 → 원화</h4>
+                    <input id="usdToKrwAmount" type="number" placeholder="환전할 달러 금액 ($)" />
+                    <button class="btn-primary" onclick="exchangeUsdToKrw()">환전</button>
+                    <div id="usdToKrwStatus"></div>
+                </div>
             </div>
         </div>
 
@@ -365,7 +410,7 @@
                 </div>
                 <div>
                     <div class="trade-total-box">
-                        <div class="trade-total-label">예상 금액</div>
+                        <div class="trade-total-label" id="tradeTotalLabel">예상 금액</div>
                         <div class="trade-total-amount" id="tradeTotal">₩0</div>
                     </div>
                     <button class="btn-buy" onclick="trade('BUY')" style="width:100%;margin-bottom:8px;padding:12px;font-size:14px">🔴 매수</button>
@@ -482,6 +527,16 @@
     let holdingsData = [];
     let domSymbol = null, domMarket = null;
     let ovsSymbol = null, ovsMarket = null, ovsExchange = null;
+    let currentExchangeRate = 0;
+    let currentKrwBalance = 0;
+    let currentDollarBalance = 0;
+
+    const OVERSEAS_MARKETS = new Set(['NASDAQ','NYSE','AMEX','OTHER']);
+    function isOverseas(market) { return OVERSEAS_MARKETS.has(market); }
+    function isOverseasSymbol(symbol) { return /^[A-Za-z]+$/.test(symbol); }
+    function fmtMoney(amount, overseas) {
+        return overseas ? `$${formatNumber(amount)}` : `₩${formatNumber(amount)}`;
+    }
 
     stompClient.connect({}, () => console.log('WebSocket 연결 성공'));
 
@@ -498,6 +553,7 @@
                 loadHoldings();
                 loadWatchlist();
                 loadProfit('DAY');
+                loadExchangeRate();
                 return;
             }
             localStorage.removeItem('token');
@@ -570,6 +626,7 @@
             loadHoldings();
             loadWatchlist();
             loadProfit('DAY');
+            loadExchangeRate();
         } else {
             const text = await res.text();
             showStatus('authStatus', text, true);
@@ -587,14 +644,108 @@
     async function loadMyInfo() {
         const res = await fetch(`${BASE}/api/users/me`, { headers: authHeaders() });
         const data = await res.json();
+        currentKrwBalance = data.balance ?? 0;
+        currentDollarBalance = data.dollarBalance ?? 0;
         document.getElementById('userName').textContent = data.name;
-        document.getElementById('userBalance').textContent = formatNumber(data.balance);
+        document.getElementById('userBalance').textContent = formatNumber(currentKrwBalance);
+        document.getElementById('userDollarBalance').textContent = currentDollarBalance.toFixed(2);
+        updateTotalAssets();
     }
 
     async function updateBalance() {
-        const res = await fetch(`${BASE}/api/trade/balance`, { headers: authHeaders() });
-        const balance = await res.json();
-        document.getElementById('userBalance').textContent = formatNumber(balance);
+        const res = await fetch(`${BASE}/api/users/me`, { headers: authHeaders() });
+        const data = await res.json();
+        currentKrwBalance = data.balance ?? 0;
+        currentDollarBalance = data.dollarBalance ?? 0;
+        document.getElementById('userBalance').textContent = formatNumber(currentKrwBalance);
+        document.getElementById('userDollarBalance').textContent = currentDollarBalance.toFixed(2);
+        updateTotalAssets();
+    }
+
+    async function loadExchangeRate() {
+        const res = await fetch(`${BASE}/api/exchange/rate`, { headers: authHeaders() });
+        if (!res.ok) return;
+        const data = await res.json();
+        currentExchangeRate = data.rate;
+        document.getElementById('currentRate').textContent = formatNumber(data.rate);
+        updateTotalAssets();
+    }
+
+    async function updateTotalAssets() {
+        try {
+            const meRes = await fetch(`${BASE}/api/users/me`, { headers: authHeaders() });
+            if (meRes.ok) {
+                const me = await meRes.json();
+                currentKrwBalance = me.balance ?? currentKrwBalance;
+                currentDollarBalance = me.dollarBalance ?? currentDollarBalance;
+                document.getElementById('userBalance').textContent = formatNumber(currentKrwBalance);
+                document.getElementById('userDollarBalance').textContent = currentDollarBalance.toFixed(2);
+            }
+        } catch (e) { /* 캐시 값 사용 */ }
+
+        if (!currentExchangeRate) {
+            try {
+                const rateRes = await fetch(`${BASE}/api/exchange/rate`, { headers: authHeaders() });
+                if (rateRes.ok) {
+                    const rateData = await rateRes.json();
+                    currentExchangeRate = rateData.rate;
+                    document.getElementById('currentRate').textContent = formatNumber(currentExchangeRate);
+                }
+            } catch (e) { /* 기본값 유지 */ }
+        }
+
+        const dollarInKrw = currentDollarBalance * currentExchangeRate;
+        let holdingsKrw = 0, holdingsUsdInKrw = 0;
+        holdingsData.forEach(h => {
+            const price = currentPrices[h.symbol] || h.avgPrice;
+            if (isOverseas(h.market)) {
+                holdingsUsdInKrw += price * h.quantity * currentExchangeRate;
+            } else {
+                holdingsKrw += price * h.quantity;
+            }
+        });
+        const totalHoldings = holdingsKrw + holdingsUsdInKrw;
+        const total = currentKrwBalance + dollarInKrw + totalHoldings;
+        document.getElementById('accountKrw').textContent = formatNumber(Math.round(currentKrwBalance));
+        document.getElementById('accountDollarInKrw').textContent = formatNumber(Math.round(dollarInKrw));
+        document.getElementById('accountHoldings').textContent = formatNumber(Math.round(totalHoldings));
+        document.getElementById('accountTotal').textContent = formatNumber(Math.round(total));
+    }
+
+    async function exchangeKrwToUsd() {
+        const amount = parseFloat(document.getElementById('krwToUsdAmount').value);
+        if (!amount || amount <= 0) { showStatus('krwToUsdStatus', '금액을 입력해주세요.', true); return; }
+        const res = await fetch(`${BASE}/api/exchange/krw-to-usd`, {
+            method: 'POST', headers: authHeaders(), body: JSON.stringify({ amount })
+        });
+        const text = await res.text();
+        if (res.ok) {
+            const data = JSON.parse(text);
+            document.getElementById('userBalance').textContent = formatNumber(data.balance);
+            document.getElementById('userDollarBalance').textContent = data.dollarBalance.toFixed(2);
+            showStatus('krwToUsdStatus', `환전 완료: $${data.exchanged.toFixed(2)}`);
+            document.getElementById('krwToUsdAmount').value = '';
+        } else {
+            showStatus('krwToUsdStatus', text, true);
+        }
+    }
+
+    async function exchangeUsdToKrw() {
+        const amount = parseFloat(document.getElementById('usdToKrwAmount').value);
+        if (!amount || amount <= 0) { showStatus('usdToKrwStatus', '금액을 입력해주세요.', true); return; }
+        const res = await fetch(`${BASE}/api/exchange/usd-to-krw`, {
+            method: 'POST', headers: authHeaders(), body: JSON.stringify({ amount })
+        });
+        const text = await res.text();
+        if (res.ok) {
+            const data = JSON.parse(text);
+            document.getElementById('userBalance').textContent = formatNumber(data.balance);
+            document.getElementById('userDollarBalance').textContent = data.dollarBalance.toFixed(2);
+            showStatus('usdToKrwStatus', `환전 완료: ₩${formatNumber(Math.round(data.exchanged))}`);
+            document.getElementById('usdToKrwAmount').value = '';
+        } else {
+            showStatus('usdToKrwStatus', text, true);
+        }
     }
 
     // 국내 주식 검색
@@ -812,7 +963,10 @@
     function updateTradeTotal() {
         const price = parseFloat(document.getElementById('tradePrice').value) || 0;
         const qty = parseInt(document.getElementById('tradeQuantity').value) || 0;
-        document.getElementById('tradeTotal').textContent = '₩' + formatNumber(price * qty);
+        const market = document.getElementById('tradeMarket').value;
+        const ovs = isOverseas(market);
+        document.getElementById('tradeTotalLabel').textContent = ovs ? '예상 금액 (USD)' : '예상 금액 (KRW)';
+        document.getElementById('tradeTotal').textContent = ovs ? `$${(price * qty).toFixed(2)}` : `₩${formatNumber(price * qty)}`;
     }
     document.getElementById('tradePrice')?.addEventListener('input', updateTradeTotal);
     document.getElementById('tradeQuantity')?.addEventListener('input', updateTradeTotal);
@@ -914,6 +1068,7 @@
         }
 
         tbody.innerHTML = data.map(h => {
+            const ovs = isOverseas(h.market);
             const currentPrice = currentPrices[h.symbol] || h.avgPrice;
             const evalAmount = currentPrice * h.quantity;
             const buyAmount = h.avgPrice * h.quantity;
@@ -924,9 +1079,9 @@
                 <td><b>${h.name}</b> <span style="color:var(--text-sub);font-size:12px">${h.symbol}</span></td>
                 <td><span class="badge ${h.market}">${h.market}</span></td>
                 <td style="font-family:'JetBrains Mono',monospace">${h.quantity}주</td>
-                <td style="font-family:'JetBrains Mono',monospace">₩${formatNumber(h.avgPrice)}</td>
-                <td style="font-family:'JetBrains Mono',monospace">₩${formatNumber(currentPrice)}</td>
-                <td style="font-family:'JetBrains Mono',monospace">₩${formatNumber(Math.round(evalAmount))}</td>
+                <td style="font-family:'JetBrains Mono',monospace">${fmtMoney(ovs ? h.avgPrice.toFixed(2) : formatNumber(h.avgPrice), ovs)}</td>
+                <td style="font-family:'JetBrains Mono',monospace">${fmtMoney(ovs ? currentPrice.toFixed(2) : formatNumber(currentPrice), ovs)}</td>
+                <td style="font-family:'JetBrains Mono',monospace">${fmtMoney(ovs ? evalAmount.toFixed(2) : formatNumber(Math.round(evalAmount)), ovs)}</td>
                 <td class="${cls}" style="font-family:'JetBrains Mono',monospace;font-weight:600">${profit >= 0 ? '+' : ''}${profitRate}%</td>
             </tr>`;
         }).join('');
@@ -968,8 +1123,9 @@
         const profitRate = ((profit / buyAmount) * 100).toFixed(2);
         const cls = profit >= 0 ? 'price-up' : 'price-down';
 
-        tr.cells[4].textContent = '₩' + formatNumber(currentPrice);
-        tr.cells[5].textContent = '₩' + formatNumber(Math.round(evalAmount));
+        const ovs = isOverseas(h.market);
+        tr.cells[4].textContent = ovs ? `$${currentPrice.toFixed(2)}` : `₩${formatNumber(currentPrice)}`;
+        tr.cells[5].textContent = ovs ? `$${evalAmount.toFixed(2)}` : `₩${formatNumber(Math.round(evalAmount))}`;
         tr.cells[6].className = cls;
         tr.cells[6].textContent = (profit >= 0 ? '+' : '') + profitRate + '%';
 
@@ -978,23 +1134,25 @@
 
     function updatePortfolioSummary() {
         if (!holdingsData.length) return;
-        let totalBuy = 0, totalEval = 0;
+        let totalBuyKrw = 0, totalEvalKrw = 0;
         holdingsData.forEach(h => {
             const currentPrice = currentPrices[h.symbol] || h.avgPrice;
-            totalBuy += h.avgPrice * h.quantity;
-            totalEval += currentPrice * h.quantity;
+            const rate = isOverseas(h.market) ? (currentExchangeRate || 1) : 1;
+            totalBuyKrw += h.avgPrice * h.quantity * rate;
+            totalEvalKrw += currentPrice * h.quantity * rate;
         });
-        const totalProfit = totalEval - totalBuy;
-        const totalRate = ((totalProfit / totalBuy) * 100).toFixed(2);
+        const totalProfit = totalEvalKrw - totalBuyKrw;
+        const totalRate = totalBuyKrw > 0 ? ((totalProfit / totalBuyKrw) * 100).toFixed(2) : '0.00';
         const cls = totalProfit >= 0 ? 'price-up' : 'price-down';
         document.getElementById('portfolioSummary').innerHTML = `
-            <div style="margin-bottom:8px;font-size:13px;color:var(--text-sub)">총 매수금액 <b style="color:var(--text);font-family:'JetBrains Mono',monospace">₩${formatNumber(Math.round(totalBuy))}</b></div>
-            <div style="margin-bottom:8px;font-size:13px;color:var(--text-sub)">총 평가금액 <b style="color:var(--text);font-family:'JetBrains Mono',monospace">₩${formatNumber(Math.round(totalEval))}</b></div>
+            <div style="margin-bottom:8px;font-size:13px;color:var(--text-sub)">총 매수금액 <b style="color:var(--text);font-family:'JetBrains Mono',monospace">₩${formatNumber(Math.round(totalBuyKrw))}</b></div>
+            <div style="margin-bottom:8px;font-size:13px;color:var(--text-sub)">총 평가금액 <b style="color:var(--text);font-family:'JetBrains Mono',monospace">₩${formatNumber(Math.round(totalEvalKrw))}</b></div>
             <div class="${cls}" style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace">
                 ${totalProfit >= 0 ? '+' : ''}₩${formatNumber(Math.round(totalProfit))}
                 <span style="font-size:14px">(${totalRate}%)</span>
             </div>
         `;
+        updateTotalAssets();
     }
 
     // 주문 내역 조회
@@ -1009,13 +1167,16 @@
         tbody.innerHTML = data.map(o => {
             const time = new Date(o.createdAt).toLocaleString('ko-KR');
             const cls = o.type === 'BUY' ? 'price-up' : 'price-down';
+            const ovs = isOverseasSymbol(o.symbol);
+            const priceFmt = ovs ? `$${o.price.toFixed(2)}` : `₩${formatNumber(o.price)}`;
+            const totalFmt = ovs ? `$${(o.price * o.quantity).toFixed(2)}` : `₩${formatNumber(o.price * o.quantity)}`;
             return `<tr>
                 <td style="font-size:12px;color:var(--text-sub)">${time}</td>
                 <td><b>${o.name}</b> <span style="color:var(--text-sub);font-size:12px">${o.symbol}</span></td>
                 <td class="${cls}" style="font-weight:700">${o.type === 'BUY' ? '매수' : '매도'}</td>
                 <td style="font-family:'JetBrains Mono',monospace">${o.quantity}주</td>
-                <td style="font-family:'JetBrains Mono',monospace">₩${formatNumber(o.price)}</td>
-                <td style="font-family:'JetBrains Mono',monospace">₩${formatNumber(o.price * o.quantity)}</td>
+                <td style="font-family:'JetBrains Mono',monospace">${priceFmt}</td>
+                <td style="font-family:'JetBrains Mono',monospace">${totalFmt}</td>
             </tr>`;
         }).join('');
     }
@@ -1042,12 +1203,18 @@
         }
         tbody.innerHTML = data.profitList.map(item => {
             const pc = item.profit >= 0 ? 'price-up' : 'price-down';
+            const ovs = isOverseasSymbol(item.symbol);
+            const sellFmt = ovs ? `$${item.sellPrice.toFixed(2)}` : `₩${formatNumber(item.sellPrice)}`;
+            const avgFmt = item.avgPrice != null ? (ovs ? `$${item.avgPrice.toFixed(2)}` : `₩${formatNumber(item.avgPrice)}`) : '-';
+            const profitFmt = ovs
+                ? `${item.profit >= 0 ? '+' : ''}$${Math.abs(item.profit).toFixed(2)}`
+                : `${item.profit >= 0 ? '+' : ''}₩${formatNumber(Math.round(item.profit))}`;
             return `<tr>
                 <td><b>${item.name}</b> <span style="color:var(--text-sub);font-size:12px">${item.symbol}</span></td>
-                <td style="font-family:'JetBrains Mono',monospace">₩${formatNumber(item.sellPrice)}</td>
-                <td style="font-family:'JetBrains Mono',monospace">${item.avgPrice != null ? '₩' + formatNumber(item.avgPrice) : '-'}</td>
+                <td style="font-family:'JetBrains Mono',monospace">${sellFmt}</td>
+                <td style="font-family:'JetBrains Mono',monospace">${avgFmt}</td>
                 <td style="font-family:'JetBrains Mono',monospace">${item.quantity}주</td>
-                <td class="${pc}" style="font-family:'JetBrains Mono',monospace;font-weight:600">${item.profit >= 0 ? '+' : ''}₩${formatNumber(Math.round(item.profit))}</td>
+                <td class="${pc}" style="font-family:'JetBrains Mono',monospace;font-weight:600">${profitFmt}</td>
             </tr>`;
         }).join('');
     }
