@@ -20,20 +20,14 @@ public class StockWebSocketService {
     private final KisWebSocketClient kisWebSocketClient;
     private final MarketTimeService marketTimeService;
 
-    // 국내 주식 - 시간대별 처리
+    // 국내 주식 - 정규장이면 KIS 웹소켓, 아니면 REST API 폴링
     @Scheduled(fixedDelay = 3000)
     public void sendDomesticStockPrices() {
         for (String symbol : subscriptionService.getDomesticSymbols()) {
             try {
                 if (marketTimeService.isKoreanMarketOpen()) {
-                    // 정규장: KIS 웹소켓이 알아서 보내줌
                     kisWebSocketClient.subscribe(symbol);
-                } else if (marketTimeService.isKoreanExtendedHours()) {
-                    // 시간외: 3초마다 시간외 단일가 REST API 조회
-                    StockPriceDto price = stockService.getDomesticOverTimePrice(symbol);
-                    messagingTemplate.convertAndSend("/topic/domestic/" + symbol, price);
                 } else {
-                    // 야간/주말: 종가 1회 조회
                     StockPriceDto price = stockService.getDomesticStockPrice(symbol);
                     messagingTemplate.convertAndSend("/topic/domestic/" + symbol, price);
                 }

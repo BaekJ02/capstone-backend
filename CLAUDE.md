@@ -74,10 +74,16 @@ STOMP over SockJS. Clients send to `/app/subscribe/domestic` or `/app/subscribe/
   - 미국주식 상세정보는 KIS API 미제공으로 재무데이터(PER, EPS, 시가총액 등) 없음, 추후 Yahoo Finance 연동 예정
 - KIS 웹소켓 실시간 연동 (`ws://ops.koreainvestment.com:21000`)
   - 국내주식 정규장(09:00~15:30) → `KisWebSocketClient`로 실시간 수신 후 `/topic/domestic/{symbol}` 브로드캐스트
-  - 시간외(08:00~09:00, 15:40~18:00) → REST API 3초 폴링 (`getDomesticOverTimePrice`)
-  - 야간/주말 → 종가 고정 (`getDomesticStockPrice`)
-  - 미국주식은 아직 기존 3초 REST 폴링 유지
+  - 시간외/야간/주말 → 종가 고정 (`getDomesticStockPrice`, 3초 폴링)
+  - 미국주식 정규장 → KIS 웹소켓 실시간 수신 (tr_id: HDFSCNT0, tr_key: D+거래소3자리+심볼, 예: DNASAAPL)
+  - 미국주식 장외 → REST API 3초 폴링
   - 새 파일: `MarketTimeService.java` (시간대 판별), `KisWebSocketClient.java` (KIS WS 연결/구독/파싱)
+- 호가창: `OrderBookDto`, `GET /api/stocks/orderbook/domestic/{symbol}` (tr_id: FHKST01010200)
+  - 실시간 호가 웹소켓: H0STASP0 → `/topic/orderbook/{symbol}`
+  - 실시간 체결 웹소켓: H0STCNT0 → `/topic/tradetick/{symbol}` (TradeTickDto)
+  - 국내주식 구독 시 H0STCNT0 + H0STASP0 동시 구독
+- 매매 수량 유효성 검사: 프론트(trade 함수) + 백엔드(TradeService.buy/sell) 모두 quantity < 1 차단
+- 보유종목 실시간 DOM 업데이트: WebSocket 수신 시 `loadHoldings()` 대신 `updateHoldingRow(symbol)`으로 해당 행만 갱신
 
 ## Key Design Notes
 

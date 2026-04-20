@@ -1,9 +1,11 @@
 package capstone.service;
 
+import capstone.dto.OrderBookDto;
 import capstone.dto.StockDetailDto;
 import capstone.dto.StockPriceDto;
 import capstone.dto.StockSearchDto;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,7 @@ import java.util.List;
 import capstone.dto.ChartDataDto;
 import java.util.LinkedHashMap;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class StockService {
@@ -273,31 +276,6 @@ public class StockService {
         return result;
     }
 
-    // 국내 시간외 단일가 조회
-    public StockPriceDto getDomesticOverTimePrice(String symbol) {
-        String url = baseUrl + "/uapi/domestic-stock/v1/quotations/inquire-overtime-price"
-                + "?fid_cond_mrkt_div_code=J"
-                + "&fid_input_iscd=" + symbol;
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("authorization", "Bearer " + kisAuthService.getAccessToken());
-        headers.set("appkey", appKey);
-        headers.set("appsecret", appSecret);
-        headers.set("tr_id", "FHPST02310000");
-        headers.set("custtype", "P");
-
-        HttpEntity<Void> request = new HttpEntity<>(headers);
-        Map<String, Object> response = restTemplate.exchange(url, HttpMethod.GET, request, Map.class).getBody();
-        Map<String, String> output = (Map<String, String>) response.get("output");
-
-        StockPriceDto dto = new StockPriceDto();
-        dto.setSymbol(symbol);
-        dto.setPrice(output.get("ovtm_untp"));
-        dto.setChange(output.get("ovtm_prdy_vrss"));
-        dto.setChangePercent(output.get("ovtm_prdy_ctrt"));
-        return dto;
-    }
-
     // 국내 주식 상세정보
     public StockDetailDto getDomesticStockDetail(String symbol) {
         String url = baseUrl + "/uapi/domestic-stock/v1/quotations/inquire-price"
@@ -449,6 +427,49 @@ public class StockService {
             result.add(dto);
         }
         return result;
+    }
+
+    // 국내주식 호가 조회
+    public OrderBookDto getDomesticOrderBook(String symbol) {
+        String url = baseUrl + "/uapi/domestic-stock/v1/quotations/inquire-asking-price-exp-ccn"
+                + "?fid_cond_mrkt_div_code=J"
+                + "&fid_input_iscd=" + symbol;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("authorization", "Bearer " + kisAuthService.getAccessToken());
+        headers.set("appkey", appKey);
+        headers.set("appsecret", appSecret);
+        headers.set("tr_id", "FHKST01010200");
+        headers.set("custtype", "P");
+
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+        Map<String, Object> response = restTemplate.exchange(url, HttpMethod.GET, request, Map.class).getBody();
+        Map<String, String> output1 = (Map<String, String>) response.get("output1");
+
+        OrderBookDto dto = new OrderBookDto();
+        dto.setSymbol(symbol);
+        dto.setTotalAskQty(output1.get("total_askp_rsqn"));
+        dto.setTotalBidQty(output1.get("total_bidp_rsqn"));
+
+        List<OrderBookDto.OrderBookEntry> asks = new ArrayList<>();
+        for (int i = 5; i >= 1; i--) {
+            OrderBookDto.OrderBookEntry entry = new OrderBookDto.OrderBookEntry();
+            entry.setPrice(output1.get("askp" + i));
+            entry.setQuantity(output1.get("askp_rsqn" + i));
+            asks.add(entry);
+        }
+        dto.setAsks(asks);
+
+        List<OrderBookDto.OrderBookEntry> bids = new ArrayList<>();
+        for (int i = 1; i <= 5; i++) {
+            OrderBookDto.OrderBookEntry entry = new OrderBookDto.OrderBookEntry();
+            entry.setPrice(output1.get("bidp" + i));
+            entry.setQuantity(output1.get("bidp_rsqn" + i));
+            bids.add(entry);
+        }
+        dto.setBids(bids);
+
+        return dto;
     }
 
 }

@@ -225,6 +225,19 @@
         ::-webkit-scrollbar-track { background: var(--surface); }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
+        /* 호가창 */
+        .ask-row td { text-align:right; padding:5px 8px; font-family:'JetBrains Mono',monospace; font-size:12px; border-bottom:1px solid var(--border); }
+        .ask-row .qty { color: var(--down); }
+        .ask-row .price { color: var(--down); font-weight:600; }
+        .ask-row .bar-cell { width:80px; }
+        .bid-row td { text-align:left; padding:5px 8px; font-family:'JetBrains Mono',monospace; font-size:12px; border-bottom:1px solid var(--border); }
+        .bid-row .qty { color: #4fa3e0; }
+        .bid-row .price { color: #4fa3e0; font-weight:600; }
+        .tick-row { display:flex; justify-content:space-between; padding:5px 8px; border-bottom:1px solid var(--border); animation: fadeIn 0.3s; }
+        .tick-buy { color: var(--down); }
+        .tick-sell { color: #4fa3e0; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+
         /* 로그인 화면 */
         .auth-wrap {
             max-width: 480px;
@@ -310,6 +323,31 @@
                     <input id="overseasKeyword" placeholder="종목명/코드 검색 (예: Apple, AAPL)" oninput="searchOverseas()" />
                     <div class="search-results" id="overseasSearchResults"></div>
                     <div class="price-card" id="overseasPriceCard">종목을 선택해주세요</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 호가창 & 체결 내역 -->
+        <div class="card" id="orderBookCard" style="display:none">
+            <h3>📊 호가창 & 체결 내역</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                <div>
+                    <h4 id="orderBookTitle">호가</h4>
+                    <div id="totalAskQty" style="text-align:right;font-size:12px;color:var(--down);margin-bottom:6px;font-family:'JetBrains Mono',monospace"></div>
+                    <table id="askTable" style="margin-bottom:4px">
+                        <tbody id="askBody"></tbody>
+                    </table>
+                    <div id="currentPriceDivider" style="text-align:center;padding:6px;background:var(--surface2);border-radius:4px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;margin:4px 0"></div>
+                    <table id="bidTable" style="margin-top:4px">
+                        <tbody id="bidBody"></tbody>
+                    </table>
+                    <div id="totalBidQty" style="text-align:left;font-size:12px;color:#4fa3e0;margin-top:6px;font-family:'JetBrains Mono',monospace"></div>
+                </div>
+                <div>
+                    <h4>실시간 체결</h4>
+                    <div id="tradeTickList" style="height:320px;overflow-y:auto;font-size:12px;font-family:'JetBrains Mono',monospace">
+                        <div style="color:var(--text-sub);text-align:center;padding:20px">체결 내역 없음</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -583,6 +621,28 @@
             document.getElementById('tradePrice').value = data.price;
             updateTradeTotal();
         });
+
+        // 호가창 표시
+        document.getElementById('orderBookCard').style.display = '';
+        document.getElementById('orderBookTitle').textContent = `${name} 호가`;
+        document.getElementById('tradeTickList').innerHTML = '<div style="color:var(--text-sub);text-align:center;padding:20px">체결 내역 없음</div>';
+
+        // 초기 호가 REST 로드
+        fetch(`${BASE}/api/stocks/orderbook/domestic/${symbol}`)
+            .then(r => r.json())
+            .then(data => renderOrderBook(data, symbol));
+
+        // 호가 웹소켓 구독
+        if (subscriptions['orderbook']) subscriptions['orderbook'].unsubscribe();
+        subscriptions['orderbook'] = stompClient.subscribe(`/topic/orderbook/${symbol}`, msg => {
+            renderOrderBook(JSON.parse(msg.body), symbol);
+        });
+
+        // 체결 웹소켓 구독
+        if (subscriptions['tradetick']) subscriptions['tradetick'].unsubscribe();
+        subscriptions['tradetick'] = stompClient.subscribe(`/topic/tradetick/${symbol}`, msg => {
+            addTradeTick(JSON.parse(msg.body));
+        });
     }
 
     // 미국 주식 선택
@@ -590,6 +650,7 @@
         document.getElementById('overseasKeyword').value = name;
         document.getElementById('overseasSearchResults').innerHTML = '';
         setTradeForm(symbol, name, market);
+        document.getElementById('orderBookCard').style.display = 'none';
 
         if (subscriptions['overseas']) subscriptions['overseas'].unsubscribe();
         const exchange = getExchangeCode(market);
@@ -610,6 +671,53 @@
             document.getElementById('tradePrice').value = data.price;
             updateTradeTotal();
         });
+    }
+
+    function renderOrderBook(data, symbol) {
+        const maxQty = Math.max(
+            ...data.asks.map(e => parseInt(e.quantity) || 0),
+            ...data.bids.map(e => parseInt(e.quantity) || 0),
+            1
+        );
+
+        document.getElementById('askBody').innerHTML = data.asks.map(e => {
+            const w = Math.round((parseInt(e.quantity) || 0) / maxQty * 100);
+            return `<tr class="ask-row">
+                <td class="qty">${formatNumber(e.quantity)}</td>
+                <td class="bar-cell"><div style="background:var(--down-dim);height:6px;border-radius:2px;width:${w}%;margin-left:auto"></div></td>
+                <td class="price">₩${formatNumber(e.price)}</td>
+            </tr>`;
+        }).join('');
+
+        document.getElementById('bidBody').innerHTML = data.bids.map(e => {
+            const w = Math.round((parseInt(e.quantity) || 0) / maxQty * 100);
+            return `<tr class="bid-row">
+                <td class="price">₩${formatNumber(e.price)}</td>
+                <td class="bar-cell"><div style="background:var(--accent-dim);height:6px;border-radius:2px;width:${w}%"></div></td>
+                <td class="qty">${formatNumber(e.quantity)}</td>
+            </tr>`;
+        }).join('');
+
+        const cur = currentPrices[symbol];
+        document.getElementById('currentPriceDivider').textContent = cur ? `₩${formatNumber(cur)}` : '';
+        document.getElementById('totalAskQty').textContent = `매도잔량 합계: ${formatNumber(data.totalAskQty)}`;
+        document.getElementById('totalBidQty').textContent = `매수잔량 합계: ${formatNumber(data.totalBidQty)}`;
+    }
+
+    function addTradeTick(data) {
+        const list = document.getElementById('tradeTickList');
+        const empty = list.querySelector('div[style*="text-align:center"]');
+        if (empty) empty.remove();
+
+        const cls = data.side === 'BUY' ? 'tick-buy' : 'tick-sell';
+        const label = data.side === 'BUY' ? '매수' : '매도';
+        const time = data.time ? data.time.replace(/(\d{2})(\d{2})(\d{2})/, '$1:$2:$3') : '';
+        const row = document.createElement('div');
+        row.className = `tick-row ${cls}`;
+        row.innerHTML = `<span>${time}</span><span>₩${formatNumber(data.price)}</span><span>${formatNumber(data.quantity)}주</span><span>${label}</span>`;
+        list.insertBefore(row, list.firstChild);
+
+        while (list.children.length > 50) list.removeChild(list.lastChild);
     }
 
     function setTradeForm(symbol, name, market) {
@@ -638,6 +746,10 @@
         };
         if (!dto.symbol || !dto.quantity || !dto.price) {
             showStatus('tradeStatus', '종목과 수량, 가격을 입력해주세요.', true);
+            return;
+        }
+        if (dto.quantity < 1) {
+            showStatus('tradeStatus', '수량은 1주 이상이어야 합니다.', true);
             return;
         }
         const res = await fetch(`${BASE}/api/trade/${type === 'BUY' ? 'buy' : 'sell'}`, {

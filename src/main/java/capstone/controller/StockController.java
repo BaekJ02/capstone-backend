@@ -1,5 +1,6 @@
 package capstone.controller;
 
+import capstone.dto.OrderBookDto;
 import capstone.dto.StockDetailDto;
 import capstone.dto.StockPriceDto;
 import capstone.dto.StockSearchDto;
@@ -99,5 +100,11 @@ public class StockController {
             @PathVariable String symbol,
             @RequestParam(defaultValue = "NAS") String exchange) {
         return stockService.getOverseasYearlyData(symbol, exchange);
+    }
+
+    // 국내주식 호가 조회
+    @GetMapping("/orderbook/domestic/{symbol}")
+    public OrderBookDto getDomesticOrderBook(@PathVariable String symbol) {
+        return stockService.getDomesticOrderBook(symbol);
     }
 }

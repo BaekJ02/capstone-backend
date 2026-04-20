@@ -25,6 +25,8 @@ public class TradeService {
     // 매수
     @Transactional
     public String buy(Long userId, TradeDto dto) {
+        if (dto.getQuantity() < 1) throw new RuntimeException("수량은 1주 이상이어야 합니다.");
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("존재하지 않는 유저입니다."));
 
@@ -77,6 +79,8 @@ public class TradeService {
     // 매도
     @Transactional
     public String sell(Long userId, TradeDto dto) {
+        if (dto.getQuantity() < 1) throw new RuntimeException("수량은 1주 이상이어야 합니다.");
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("존재하지 않는 유저입니다."));
 
