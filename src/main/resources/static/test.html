@@ -263,7 +263,7 @@
     <h2>📈 캡스톤 주식 테스트</h2>
 
     <!-- 로그인/회원가입 -->
-    <div id="authCard">
+    <div id="authCard" class="hidden">
         <div class="auth-wrap">
             <div class="auth-title">주식 테스트 플랫폼</div>
             <div class="auth-sub">계정으로 로그인하거나 새로 가입하세요</div>
@@ -458,6 +458,25 @@
 
     stompClient.connect({}, () => console.log('WebSocket 연결 성공'));
 
+    // 페이지 로드 시 토큰으로 자동 로그인 복원
+    (async function restoreSession() {
+        const token = localStorage.getItem('token');
+        if (token) {
+            const res = await fetch(`${BASE}/api/users/me`, { headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('userName').textContent = data.name;
+                document.getElementById('userBalance').textContent = formatNumber(data.balance);
+                document.getElementById('mainContent').classList.remove('hidden');
+                loadHoldings();
+                loadWatchlist();
+                return;
+            }
+            localStorage.removeItem('token');
+        }
+        document.getElementById('authCard').classList.remove('hidden');
+    })();
+
     function getExchangeCode(market) {
         if (market === 'NASDAQ') return 'NAS';
         if (market === 'NYSE') return 'NYS';
@@ -498,18 +517,25 @@
         showStatus('authStatus', text, !res.ok);
     }
 
+    function authHeaders() {
+        const token = localStorage.getItem('token');
+        return token ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+    }
+
     // 로그인
     async function login() {
         const res = await fetch(`${BASE}/api/users/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify({
                 email: document.getElementById('loginEmail').value,
                 password: document.getElementById('loginPassword').value
             })
         });
         if (res.ok) {
+            const data = await res.json();
+            localStorage.setItem('token', data.token);
+            document.getElementById('userName').textContent = data.name;
             await loadMyInfo();
             document.getElementById('authCard').classList.add('hidden');
             document.getElementById('mainContent').classList.remove('hidden');
@@ -522,22 +548,22 @@
     }
 
     // 로그아웃
-    async function logout() {
-        await fetch(`${BASE}/api/users/logout`, { method: 'POST', credentials: 'include' });
+    function logout() {
+        localStorage.removeItem('token');
         document.getElementById('authCard').classList.remove('hidden');
         document.getElementById('mainContent').classList.add('hidden');
     }
 
     // 내 정보 조회
     async function loadMyInfo() {
-        const res = await fetch(`${BASE}/api/users/me`, { credentials: 'include' });
+        const res = await fetch(`${BASE}/api/users/me`, { headers: authHeaders() });
         const data = await res.json();
         document.getElementById('userName').textContent = data.name;
         document.getElementById('userBalance').textContent = formatNumber(data.balance);
     }
 
     async function updateBalance() {
-        const res = await fetch(`${BASE}/api/trade/balance`, { credentials: 'include' });
+        const res = await fetch(`${BASE}/api/trade/balance`, { headers: authHeaders() });
         const balance = await res.json();
         document.getElementById('userBalance').textContent = formatNumber(balance);
     }
@@ -754,8 +780,7 @@
         }
         const res = await fetch(`${BASE}/api/trade/${type === 'BUY' ? 'buy' : 'sell'}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
+            headers: authHeaders(),
             body: JSON.stringify(dto)
         });
         const text = await res.text();
@@ -772,8 +797,7 @@
 
         const res = await fetch(`${BASE}/api/watchlist`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
+            headers: authHeaders(),
             body: JSON.stringify({ symbol, name, market })
         });
         const text = await res.text();
@@ -790,7 +814,7 @@
     async function removeWatchlist(symbol) {
         const res = await fetch(`${BASE}/api/watchlist/${symbol}`, {
             method: 'DELETE',
-            credentials: 'include'
+            headers: authHeaders()
         });
         const text = await res.text();
         showStatus('watchStatus', text, !res.ok);
@@ -798,7 +822,7 @@
     }
 
     async function loadWatchlist() {
-        const res = await fetch(`${BASE}/api/watchlist`, { credentials: 'include' });
+        const res = await fetch(`${BASE}/api/watchlist`, { headers: authHeaders() });
         if (!res.ok) return;
         const data = await res.json();
         const container = document.getElementById('watchlistItems');
@@ -821,7 +845,7 @@
 
     // 보유 종목 조회 (최초 1회 + 새로고침 버튼)
     async function loadHoldings() {
-        const res = await fetch(`${BASE}/api/trade/holdings`, { credentials: 'include' });
+        const res = await fetch(`${BASE}/api/trade/holdings`, { headers: authHeaders() });
         const data = await res.json();
         holdingsData = data;
         const tbody = document.getElementById('holdingsTable');
@@ -918,7 +942,7 @@
 
     // 주문 내역 조회
     async function loadOrders() {
-        const res = await fetch(`${BASE}/api/trade/orders`, { credentials: 'include' });
+        const res = await fetch(`${BASE}/api/trade/orders`, { headers: authHeaders() });
         const data = await res.json();
         const tbody = document.getElementById('ordersTable');
         if (!data.length) {
