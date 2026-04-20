@@ -31,6 +31,11 @@
 - 매매 수량 음수/0 유효성 검사 (프론트+백엔드)
 - N+1 쿼리 문제 해결
 - 보유종목 실시간 DOM 업데이트 방식으로 변경
+- Spring Security + JWT 인증 구현
+- BCrypt 비밀번호 암호화
+- JwtTokenProvider, JwtAuthenticationFilter, SecurityConfig 구현
+- 세션 방식 → JWT Stateless 방식으로 전환
+- 서버 재시작해도 로그인 유지
 
 ---
 
@@ -46,9 +51,9 @@
 
 - [ ] 내일 정규장 때 호가창 + 체결내역 실시간 동작 확인
 - [ ] 오늘 밤 22:30 미국주식 웹소켓 실시간 테스트
-- [ ] MySQL 교체
-- [ ] Spring Security + JWT
 - [ ] 미국주식 재무데이터 (Yahoo Finance 연동)
+- [ ] MySQL 교체 (배포 단계에서)
+- [ ] OAuth2 소셜 로그인 (구글/카카오 - 여유되면)
 
 ---
 

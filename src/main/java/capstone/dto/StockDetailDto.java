@@ -22,4 +22,8 @@ public class StockDetailDto {
     private String low52;         // 52주 최저
     private String volume;        // 거래량
     private String tradingValue;  // 거래대금
+
+    // 미국주식 전용 (FMP)
+    private String beta;          // 베타
+    private String lastDividend;  // 배당금
 }

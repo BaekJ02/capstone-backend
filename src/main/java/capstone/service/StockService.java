@@ -27,6 +27,12 @@ public class StockService {
     @Value("${kis.api.url}")
     private String baseUrl;
 
+    @Value("${fmp.api.url}")
+    private String fmpBaseUrl;
+
+    @Value("${fmp.api.key}")
+    private String fmpApiKey;
+
     // 국내 주식 현재가
     public StockPriceDto getDomesticStockPrice(String symbol) {
         String url = baseUrl + "/uapi/domestic-stock/v1/quotations/inquire-price"
@@ -312,73 +318,68 @@ public class StockService {
         return dto;
     }
 
-    // 미국 주식 상세정보
+    // 미국 주식 상세정보 (현재가: KIS, 재무데이터: FMP)
     public StockDetailDto getOverseasStockDetail(String symbol, String exchange) {
-        String url = baseUrl + "/uapi/overseas-price/v1/quotations/price"
-                + "?AUTH="
-                + "&EXCD=" + exchange
-                + "&SYMB=" + symbol;
+        // KIS: 현재가 / 전일대비 / 거래량
+        String kisUrl = baseUrl + "/uapi/overseas-price/v1/quotations/price"
+                + "?AUTH=&EXCD=" + exchange + "&SYMB=" + symbol;
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("authorization", "Bearer " + kisAuthService.getAccessToken());
-        headers.set("appkey", appKey);
-        headers.set("appsecret", appSecret);
-        headers.set("tr_id", "HHDFS00000300");
-        headers.set("custtype", "P");
+        HttpHeaders kisHeaders = new HttpHeaders();
+        kisHeaders.set("authorization", "Bearer " + kisAuthService.getAccessToken());
+        kisHeaders.set("appkey", appKey);
+        kisHeaders.set("appsecret", appSecret);
+        kisHeaders.set("tr_id", "HHDFS00000300");
+        kisHeaders.set("custtype", "P");
 
-        HttpEntity<Void> request = new HttpEntity<>(headers);
-        Map<String, Object> response = restTemplate.exchange(url, HttpMethod.GET, request, Map.class).getBody();
-        Map<String, String> output = (Map<String, String>) response.get("output");
-
-        output.forEach((k, v) -> System.out.println(k + " = " + v));
+        Map<String, Object> kisResponse = restTemplate
+                .exchange(kisUrl, HttpMethod.GET, new HttpEntity<>(kisHeaders), Map.class).getBody();
+        Map<String, String> kisOutput = (Map<String, String>) kisResponse.get("output");
 
         StockDetailDto dto = new StockDetailDto();
         dto.setSymbol(symbol);
-        dto.setPrice(output.get("last"));
-        dto.setChange(output.get("diff"));
-        dto.setChangePercent(output.get("rate"));
-        dto.setHigh52(output.get("h52p"));
-        dto.setLow52(output.get("l52p"));
-        dto.setVolume(output.get("tvol"));
-        dto.setPer(output.get("per"));
-        dto.setEps(output.get("eps"));
+        dto.setPrice(kisOutput.get("last"));
+        dto.setChange(kisOutput.get("diff"));
+        dto.setChangePercent(kisOutput.get("rate"));
+        dto.setVolume(kisOutput.get("tvol"));
 
-        String url2 = baseUrl + "/uapi/overseas-price/v1/quotations/search-info"
-                + "?EXCD=" + exchange
-                + "&SYMB=" + symbol;
-
-        HttpHeaders headers2 = new HttpHeaders();
-        headers2.set("authorization", "Bearer " + kisAuthService.getAccessToken());
-        headers2.set("appkey", appKey);
-        headers2.set("appsecret", appSecret);
-        headers2.set("tr_id", "HHDFS76240000");
-        headers2.set("custtype", "P");
-
-        HttpEntity<Void> request2 = new HttpEntity<>(headers2);
-        Map<String, Object> response2 = restTemplate.exchange(url2, HttpMethod.GET, request2, Map.class).getBody();
-        Map<String, String> output2 = (Map<String, String>) response2.get("output2");
-
-        if (output2 != null) {
-            output2.forEach((k, v) -> System.out.println(k + " = " + v));
+        // FMP profile: 시가총액 / 베타 / 52주 범위 / 배당금 / 거래량
+        try {
+            List<Map<String, Object>> profileRes = restTemplate.getForObject(
+                    fmpBaseUrl + "/profile?symbol=" + symbol + "&apikey=" + fmpApiKey, List.class);
+            if (profileRes != null && !profileRes.isEmpty()) {
+                Map<String, Object> p = profileRes.get(0);
+                Object mktCap = p.get("marketCap");
+                if (mktCap != null) {
+                    dto.setMarketCap(String.valueOf(((Number) mktCap).longValue()));
+                }
+                dto.setBeta(String.valueOf(p.getOrDefault("beta", "")));
+                String dividendYield = p.get("dividendYield") != null
+                        ? String.valueOf(p.get("dividendYield"))
+                        : String.valueOf(p.getOrDefault("lastDividend", ""));
+                dto.setLastDividend(dividendYield);
+                dto.setVolume(String.valueOf(p.getOrDefault("volume", dto.getVolume())));
+                String range = (String) p.get("range");
+                if (range != null && range.contains("-")) {
+                    String[] parts = range.split("-", 2);
+                    dto.setLow52(parts[0].trim());
+                    dto.setHigh52(parts[1].trim());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("FMP profile 호출 실패 ({}): {}", symbol, e.getMessage());
         }
 
-        String url3 = baseUrl + "/uapi/overseas-price/v1/quotations/search-info"
-                + "?PRDT_TYPE_CD=512"
-                + "&PDNO=" + symbol;
-
-        HttpHeaders headers3 = new HttpHeaders();
-        headers3.set("authorization", "Bearer " + kisAuthService.getAccessToken());
-        headers3.set("appkey", appKey);
-        headers3.set("appsecret", appSecret);
-        headers3.set("tr_id", "HHDFS76200200");
-        headers3.set("custtype", "P");
-
-        HttpEntity<Void> request3 = new HttpEntity<>(headers3);
-        Map<String, Object> response3 = restTemplate.exchange(url3, HttpMethod.GET, request3, Map.class).getBody();
-        Map<String, String> output3 = (Map<String, String>) response3.get("output");
-
-        if (output3 != null) {
-            output3.forEach((k, v) -> System.out.println(k + " = " + v));
+        // FMP ratios-ttm: PER / PBR
+        try {
+            List<Map<String, Object>> ratiosRes = restTemplate.getForObject(
+                    fmpBaseUrl + "/ratios-ttm?symbol=" + symbol + "&apikey=" + fmpApiKey, List.class);
+            if (ratiosRes != null && !ratiosRes.isEmpty()) {
+                Map<String, Object> r = ratiosRes.get(0);
+                dto.setPer(formatRatio(r.get("priceToEarningsRatioTTM")));
+                dto.setPbr(formatRatio(r.get("priceToBookRatioTTM")));
+            }
+        } catch (Exception e) {
+            log.warn("FMP ratios-ttm 호출 실패 ({}): {}", symbol, e.getMessage());
         }
 
         return dto;
@@ -470,6 +471,17 @@ public class StockService {
         dto.setBids(bids);
 
         return dto;
+    }
+
+    private String formatRatio(Object value) {
+        if (value == null) return "";
+        String str = value.toString().trim();
+        if (str.isEmpty() || str.equals("null")) return "";
+        try {
+            return String.format("%.2f", Double.parseDouble(str));
+        } catch (NumberFormatException e) {
+            return "";
+        }
     }
 
 }

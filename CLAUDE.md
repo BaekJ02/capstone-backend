@@ -28,7 +28,8 @@ Spring Boot backend for a stock trading simulation platform. No frontend code li
 
 ```
 src/main/java/capstone/
-├── config/          # CORS (CorsConfig), WebSocket (WebSocketConfig), beans (AppConfig)
+├── config/          # Security (SecurityConfig, JwtTokenProvider, JwtAuthenticationFilter),
+│                    # WebSocket (WebSocketConfig), beans (AppConfig), CORS (CorsConfig - 빈 껍데기)
 ├── controller/      # REST + WebSocket message handlers
 ├── service/         # Business logic + KIS API calls
 ├── repository/      # Spring Data JPA interfaces
@@ -43,11 +44,20 @@ src/main/java/capstone/
 ```properties
 kis.api.key=YOUR_KEY
 kis.api.secret=YOUR_SECRET
+jwt.secret=YOUR_JWT_SECRET
 ```
 
 ### Authentication
 
-Session-based (no Spring Security or JWT). On login, `userId` is stored in `HttpSession`. Protected endpoints retrieve it via `session.getAttribute("userId")` and return 401 if absent.
+JWT (Bearer 토큰) 방식. 세션 방식은 제거됨.
+
+- 로그인 성공 응답: `{ "token": "...", "name": "..." }`
+- 보호된 API 요청 시 헤더 필수: `Authorization: Bearer {token}`
+- `JwtTokenProvider` → 토큰 생성/파싱/검증 (HS256, 24시간 만료)
+- `JwtAuthenticationFilter` → `OncePerRequestFilter`, SecurityContextHolder에 userId(Long) 설정
+- `SecurityConfig` → `/api/users/signup`, `/api/users/login`, `/ws/**`, `/api/stocks/**`, `/h2-console/**` 인증 없이 허용; 나머지 `/api/**` 인증 필요
+- 컨트롤러에서 userId 추출: `(Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal()`
+- 비밀번호: `BCryptPasswordEncoder`로 암호화 저장, `matches()`로 검증
 
 ### WebSocket / Real-time Data
 
@@ -60,11 +70,11 @@ STOMP over SockJS. Clients send to `/app/subscribe/domestic` or `/app/subscribe/
 
 ### CORS
 
-`CorsConfig` explicitly allows `http://localhost:5173`, `http://localhost:3000`, and `https://*.ngrok-free.app` with credentials. Session cookies require `SameSite=None; Secure` (set in `application.properties`) for cross-origin requests via ngrok.
+`SecurityConfig`에서 모든 origin 허용 (`allowedOriginPatterns("*")`)으로 설정. CSRF 비활성화, 세션 STATELESS. `CorsConfig`는 빈 껍데기로 유지 (충돌 방지). WebSocket(`WebSocketConfig`)은 별도로 `setAllowedOriginPatterns("*")` 설정.
 
 ## Implemented Features
 
-- 회원가입 / 로그인 / 로그아웃 (session-based)
+- 회원가입 / 로그인 / 로그아웃 (JWT 기반, BCrypt 비밀번호 암호화)
 - 모의 매수 / 매도 / 보유종목 / 잔고 / 주문내역
 - 종목 검색 (KOSPI / KOSDAQ / ETF / 미국주식)
 - 현재가 / 차트 / 분봉 / 연봉 (국내 + 미국)
@@ -84,6 +94,7 @@ STOMP over SockJS. Clients send to `/app/subscribe/domestic` or `/app/subscribe/
   - 국내주식 구독 시 H0STCNT0 + H0STASP0 동시 구독
 - 매매 수량 유효성 검사: 프론트(trade 함수) + 백엔드(TradeService.buy/sell) 모두 quantity < 1 차단
 - 보유종목 실시간 DOM 업데이트: WebSocket 수신 시 `loadHoldings()` 대신 `updateHoldingRow(symbol)`으로 해당 행만 갱신
+- Spring Security + JWT: `JwtTokenProvider`, `JwtAuthenticationFilter`, `SecurityConfig` 구현. 세션 방식 완전 제거, Stateless 인증
 
 ## Key Design Notes
 
