@@ -72,6 +72,12 @@ STOMP over SockJS. Clients send to `/app/subscribe/domestic` or `/app/subscribe/
 - 관심종목 추가/삭제/조회 (Watchlist 도메인, `/api/watchlist`)
 - 종목별 상세정보 조회 (`/api/stocks/detail/domestic/{symbol}`, `/api/stocks/detail/overseas/{symbol}`)
   - 미국주식 상세정보는 KIS API 미제공으로 재무데이터(PER, EPS, 시가총액 등) 없음, 추후 Yahoo Finance 연동 예정
+- KIS 웹소켓 실시간 연동 (`ws://ops.koreainvestment.com:21000`)
+  - 국내주식 정규장(09:00~15:30) → `KisWebSocketClient`로 실시간 수신 후 `/topic/domestic/{symbol}` 브로드캐스트
+  - 시간외(08:00~09:00, 15:40~18:00) → REST API 3초 폴링 (`getDomesticOverTimePrice`)
+  - 야간/주말 → 종가 고정 (`getDomesticStockPrice`)
+  - 미국주식은 아직 기존 3초 REST 폴링 유지
+  - 새 파일: `MarketTimeService.java` (시간대 판별), `KisWebSocketClient.java` (KIS WS 연결/구독/파싱)
 
 ## Key Design Notes
 

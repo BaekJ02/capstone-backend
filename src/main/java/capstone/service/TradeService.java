@@ -119,9 +119,7 @@ public class TradeService {
 
     // 보유 종목 조회
     public List<Holding> getHoldings(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("존재하지 않는 유저입니다."));
-        return holdingRepository.findByUser(user);
+        return holdingRepository.findByUserId(userId);
     }
 
     // 주문 내역 조회

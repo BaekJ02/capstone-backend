@@ -416,6 +416,7 @@
     const stompClient = Stomp.over(socket);
     const subscriptions = {};
     let currentPrices = {};
+    let holdingsData = [];
 
     stompClient.connect({}, () => console.log('WebSocket 연결 성공'));
 
@@ -706,10 +707,11 @@
         `).join('');
     }
 
-    // 보유 종목 조회
+    // 보유 종목 조회 (최초 1회 + 새로고침 버튼)
     async function loadHoldings() {
         const res = await fetch(`${BASE}/api/trade/holdings`, { credentials: 'include' });
         const data = await res.json();
+        holdingsData = data;
         const tbody = document.getElementById('holdingsTable');
 
         if (!data.length) {
@@ -718,36 +720,14 @@
             return;
         }
 
-        data.forEach(h => {
-            if (!subscriptions[h.symbol]) {
-                if (['KOSPI','KOSDAQ','ETF'].includes(h.market)) {
-                    stompClient.send("/app/subscribe/domestic", {}, h.symbol);
-                    subscriptions[h.symbol] = stompClient.subscribe(`/topic/domestic/${h.symbol}`, msg => {
-                        currentPrices[h.symbol] = parseFloat(JSON.parse(msg.body).price);
-                        loadHoldings();
-                    });
-                } else {
-                    const exchange = getExchangeCode(h.market);
-                    stompClient.send("/app/subscribe/overseas", {}, `${h.symbol},${exchange}`);
-                    subscriptions[h.symbol] = stompClient.subscribe(`/topic/overseas/${h.symbol}`, msg => {
-                        currentPrices[h.symbol] = parseFloat(JSON.parse(msg.body).price);
-                        loadHoldings();
-                    });
-                }
-            }
-        });
-
-        let totalBuy = 0, totalEval = 0;
         tbody.innerHTML = data.map(h => {
             const currentPrice = currentPrices[h.symbol] || h.avgPrice;
             const evalAmount = currentPrice * h.quantity;
             const buyAmount = h.avgPrice * h.quantity;
             const profit = evalAmount - buyAmount;
             const profitRate = ((profit / buyAmount) * 100).toFixed(2);
-            totalBuy += buyAmount;
-            totalEval += evalAmount;
             const cls = profit >= 0 ? 'price-up' : 'price-down';
-            return `<tr>
+            return `<tr data-symbol="${h.symbol}">
                 <td><b>${h.name}</b> <span style="color:var(--text-sub);font-size:12px">${h.symbol}</span></td>
                 <td><span class="badge ${h.market}">${h.market}</span></td>
                 <td style="font-family:'JetBrains Mono',monospace">${h.quantity}주</td>
@@ -758,6 +738,59 @@
             </tr>`;
         }).join('');
 
+        updatePortfolioSummary();
+
+        data.forEach(h => {
+            if (!subscriptions[h.symbol]) {
+                if (['KOSPI','KOSDAQ','ETF'].includes(h.market)) {
+                    stompClient.send("/app/subscribe/domestic", {}, h.symbol);
+                    subscriptions[h.symbol] = stompClient.subscribe(`/topic/domestic/${h.symbol}`, msg => {
+                        currentPrices[h.symbol] = parseFloat(JSON.parse(msg.body).price);
+                        updateHoldingRow(h.symbol);
+                    });
+                } else {
+                    const exchange = getExchangeCode(h.market);
+                    stompClient.send("/app/subscribe/overseas", {}, `${h.symbol},${exchange}`);
+                    subscriptions[h.symbol] = stompClient.subscribe(`/topic/overseas/${h.symbol}`, msg => {
+                        currentPrices[h.symbol] = parseFloat(JSON.parse(msg.body).price);
+                        updateHoldingRow(h.symbol);
+                    });
+                }
+            }
+        });
+    }
+
+    // WebSocket 가격 수신 시 해당 행만 DOM 업데이트
+    function updateHoldingRow(symbol) {
+        const h = holdingsData.find(x => x.symbol === symbol);
+        if (!h) return;
+
+        const tr = document.querySelector(`#holdingsTable tr[data-symbol="${symbol}"]`);
+        if (!tr) return;
+
+        const currentPrice = currentPrices[symbol] || h.avgPrice;
+        const evalAmount = currentPrice * h.quantity;
+        const buyAmount = h.avgPrice * h.quantity;
+        const profit = evalAmount - buyAmount;
+        const profitRate = ((profit / buyAmount) * 100).toFixed(2);
+        const cls = profit >= 0 ? 'price-up' : 'price-down';
+
+        tr.cells[4].textContent = '₩' + formatNumber(currentPrice);
+        tr.cells[5].textContent = '₩' + formatNumber(Math.round(evalAmount));
+        tr.cells[6].className = cls;
+        tr.cells[6].textContent = (profit >= 0 ? '+' : '') + profitRate + '%';
+
+        updatePortfolioSummary();
+    }
+
+    function updatePortfolioSummary() {
+        if (!holdingsData.length) return;
+        let totalBuy = 0, totalEval = 0;
+        holdingsData.forEach(h => {
+            const currentPrice = currentPrices[h.symbol] || h.avgPrice;
+            totalBuy += h.avgPrice * h.quantity;
+            totalEval += currentPrice * h.quantity;
+        });
         const totalProfit = totalEval - totalBuy;
         const totalRate = ((totalProfit / totalBuy) * 100).toFixed(2);
         const cls = totalProfit >= 0 ? 'price-up' : 'price-down';
