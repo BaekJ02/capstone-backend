@@ -99,11 +99,13 @@ STOMP over SockJS. Clients send to `/app/subscribe/domestic` or `/app/subscribe/
   - 실시간 호가 웹소켓: H0STASP0 → `/topic/orderbook/{symbol}`
   - 실시간 체결 웹소켓: H0STCNT0 → `/topic/tradetick/{symbol}` (TradeTickDto)
   - 국내주식 구독 시 H0STCNT0 + H0STASP0 동시 구독
+  - 체결 필드: 1건 = 46개 필드, `fields[offset+21]` 매수매도구분 (1=매수, 5=매도), offset = (fields.length/46 - 1) * 46
+  - 호가 필드: 1건 = 62개 필드, offset = (fields.length/62 - 1) * 62
 - 매매 수량 유효성 검사: 프론트(trade 함수) + 백엔드(TradeService.buy/sell) 모두 quantity < 1 차단
 - 보유종목 실시간 DOM 업데이트: WebSocket 수신 시 `loadHoldings()` 대신 `updateHoldingRow(symbol)`으로 해당 행만 갱신
 - Spring Security + JWT: `JwtTokenProvider`, `JwtAuthenticationFilter`, `SecurityConfig` 구현. 세션 방식 완전 제거, Stateless 인증
 - 실현손익 조회: `Order.avgPrice` 저장, `GET /api/trade/profit?period=` (DAY/WEEK/MONTH/YEAR/ALL), `ProfitDto`, `ProfitItemDto`
-- 환율: `ExchangeRateService` (한국수출입은행 API, 주말/공휴일 최대 5일 이전 재시도, 1시간 캐싱 `@Scheduled`)
+- 환율: `ExchangeRateService` (한국수출입은행 API `https://oapi.koreaexim.go.kr/site/program/financial/exchangeJSON`, 주말/공휴일 최대 5일 이전 재시도, 1시간 캐싱 `@Scheduled`, SSL 검증 비활성화 적용)
 - 환전 API: `ExchangeController` — `GET /api/exchange/rate`, `POST /api/exchange/krw-to-usd`, `POST /api/exchange/usd-to-krw`
 - 달러 잔고: `User.dollarBalance`, 미국주식 매매 시 dollarBalance 차감/추가 (`TradeService.OVERSEAS_MARKETS`)
 - 전체 계좌 현황: 원화 잔고 + 달러 잔고(KRW 환산) + 보유주식 평가금액 합산, `updateTotalAssets()` (async, /api/users/me + /api/exchange/rate 실시간 조회)

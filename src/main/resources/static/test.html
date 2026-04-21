@@ -934,8 +934,10 @@
 
         const cur = currentPrices[symbol];
         document.getElementById('currentPriceDivider').textContent = cur ? `₩${formatNumber(cur)}` : '';
-        document.getElementById('totalAskQty').textContent = `매도잔량 합계: ${formatNumber(data.totalAskQty)}`;
-        document.getElementById('totalBidQty').textContent = `매수잔량 합계: ${formatNumber(data.totalBidQty)}`;
+        const totalAskQty = data.asks.reduce((sum, e) => { const q = parseInt(e.quantity); return sum + (isNaN(q) ? 0 : q); }, 0);
+        const totalBidQty = data.bids.reduce((sum, e) => { const q = parseInt(e.quantity); return sum + (isNaN(q) ? 0 : q); }, 0);
+        document.getElementById('totalAskQty').textContent = `매도잔량 합계: ${formatNumber(totalAskQty)}`;
+        document.getElementById('totalBidQty').textContent = `매수잔량 합계: ${formatNumber(totalBidQty)}`;
     }
 
     function addTradeTick(data) {

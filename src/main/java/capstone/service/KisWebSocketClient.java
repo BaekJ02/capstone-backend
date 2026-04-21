@@ -190,46 +190,47 @@ public class KisWebSocketClient {
     }
 
     private void handleTradeTick(String[] fields) {
-        if (fields.length < 14) return;
+        if (fields.length < 46) return;
+        int dataCount = fields.length / 46;
+        int offset = (dataCount - 1) * 46;
         String symbol = fields[0];
         TradeTickDto dto = new TradeTickDto();
         dto.setSymbol(symbol);
-        dto.setTime(fields[1]);
-        dto.setPrice(fields[2]);
-        dto.setQuantity(fields[3]);
-        dto.setSide("1".equals(fields[13]) ? "BUY" : "SELL");
+        dto.setTime(fields[offset + 1]);
+        dto.setPrice(fields[offset + 2]);
+        dto.setQuantity(fields[offset + 12]);
+        dto.setSide("1".equals(fields[offset + 21]) ? "BUY" : "SELL");
         messagingTemplate.convertAndSend("/topic/tradetick/" + symbol, dto);
     }
 
     private void handleOrderBook(String[] fields) {
-        if (fields.length < 45) return;
-        String symbol = fields[0];
+        if (fields.length < 62) return;
+        int dataCount = fields.length / 62;
+        int offset = (dataCount - 1) * 62;
+        String symbol = fields[offset];
 
         OrderBookDto dto = new OrderBookDto();
         dto.setSymbol(symbol);
 
-        // 매도호가: 높은가격→낮은가격 순 (i=4→0 역순), price=fields[3+i], qty=fields[23+i]
+        // 매도호가 1~10: base+3~base+12, 매도잔량 1~10: base+23~base+32 (역순: 높은가격→낮은가격)
         List<OrderBookDto.OrderBookEntry> asks = new ArrayList<>();
-        for (int i = 4; i >= 0; i--) {
+        for (int i = 9; i >= 0; i--) {
             OrderBookDto.OrderBookEntry entry = new OrderBookDto.OrderBookEntry();
-            entry.setPrice(fields[3 + i]);
-            entry.setQuantity(fields[23 + i]);
+            entry.setPrice(fields[offset + 3 + i]);
+            entry.setQuantity(fields[offset + 23 + i]);
             asks.add(entry);
         }
         dto.setAsks(asks);
 
-        // 매수호가: 높은가격→낮은가격 순 (i=0→4), price=fields[13+i], qty=fields[33+i]
+        // 매수호가 1~10: base+13~base+22, 매수잔량 1~10: base+33~base+42
         List<OrderBookDto.OrderBookEntry> bids = new ArrayList<>();
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 10; i++) {
             OrderBookDto.OrderBookEntry entry = new OrderBookDto.OrderBookEntry();
-            entry.setPrice(fields[13 + i]);
-            entry.setQuantity(fields[33 + i]);
+            entry.setPrice(fields[offset + 13 + i]);
+            entry.setQuantity(fields[offset + 33 + i]);
             bids.add(entry);
         }
         dto.setBids(bids);
-
-        dto.setTotalAskQty(fields[43]);
-        dto.setTotalBidQty(fields[44]);
 
         messagingTemplate.convertAndSend("/topic/orderbook/" + symbol, dto);
     }
