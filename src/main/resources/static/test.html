@@ -774,7 +774,7 @@
                 const filtered = data.filter(s => ['NASDAQ','NYSE','AMEX','OTHER'].includes(s.market));
                 document.getElementById('overseasSearchResults').innerHTML = filtered.map(s => `
                     <div class="search-item" onclick="selectOverseas('${s.symbol}','${s.name}','${s.market}')">
-                        <span>${s.name} <span style="color:var(--text-sub);font-size:12px">${s.symbol}</span></span>
+                        <span>${s.name} (${s.symbol})</span>
                         <span class="badge ${s.market}">${s.market}</span>
                     </div>`).join('');
             });

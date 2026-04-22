@@ -95,7 +95,7 @@ public class StockSearchService {
 
                 StockSearchDto dto = new StockSearchDto();
                 dto.setSymbol(symbol);
-                dto.setName(name);
+                dto.setName(cleanName(name));
 
                 if (type.equals("NAS")) {
                     dto.setMarket("NASDAQ");
@@ -118,11 +118,25 @@ public class StockSearchService {
         }
     }
 
+    private String cleanName(String name) {
+        int dashIdx = name.indexOf(" - ");
+        if (dashIdx >= 0) name = name.substring(0, dashIdx);
+        name = name.replaceAll(", Inc\\.?", "")
+                   .replaceAll(" Inc\\.?", "")
+                   .replaceAll(" Corporation", "")
+                   .replaceAll(" Corp\\.?", "")
+                   .replaceAll(" Limited", "")
+                   .replaceAll(" Ltd\\.?", "")
+                   .replaceAll(" Co\\.?", "");
+        return name.trim();
+    }
+
     public List<StockSearchDto> search(String keyword) {
+        String upper = keyword.toUpperCase();
         return stockList.stream()
                 .filter(stock ->
-                        stock.getName().contains(keyword) ||
-                                stock.getSymbol().contains(keyword))
+                        stock.getName().toUpperCase().contains(upper) ||
+                                stock.getSymbol().toUpperCase().contains(upper))
                 .limit(20)
                 .collect(Collectors.toList());
     }
