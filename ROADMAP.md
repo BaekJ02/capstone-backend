@@ -48,16 +48,16 @@
 - 체결 데이터 다건 처리 (46개 필드 기준 offset 적용)
 - 호가창 잔량 합계 수정
 - 환율 API URL 변경 (oapi.koreaexim.go.kr)
+- 미국주식 검색 개선 (대소문자 무관, 종목명 간소화 - Inc./Corp. 등 제거, "Apple (AAPL)" 형태)
+- Hibernate 반복 로그 제거 (open-in-view=false, show-sql=false)
 
 ---
 
 ## 🔨 다음 할 것
 
-1. 호가창 잔량 1/2 문제 수정 (코스피 거래량 많은 종목)
-2. 미국주식 검색 개선 (대소문자 무관, 표시형식 간소화)
-3. 유저 조회 반복 로그 수정 (StockWebSocketService)
-4. 미국주식 호가창 (KIS REST API)
-5. MySQL 교체 (배포 단계)
+1. 호가창 잔량 1/2 문제 수정 (코스피 거래량 많은 종목, 정규장 때 테스트 필요)
+2. 유저 조회 반복 로그 수정 완료
+3. MySQL 교체 (배포 단계)
 
 ---
 

@@ -110,6 +110,8 @@ STOMP over SockJS. Clients send to `/app/subscribe/domestic` or `/app/subscribe/
 - 달러 잔고: `User.dollarBalance`, 미국주식 매매 시 dollarBalance 차감/추가 (`TradeService.OVERSEAS_MARKETS`)
 - 전체 계좌 현황: 원화 잔고 + 달러 잔고(KRW 환산) + 보유주식 평가금액 합산, `updateTotalAssets()` (async, /api/users/me + /api/exchange/rate 실시간 조회)
 - 미국주식 금액 $ 표시: `isOverseas(market)` / `isOverseasSymbol(symbol)` 분기, `fmtMoney()` 헬퍼
+- 미국주식 검색 개선: 대소문자 무관 검색 (`toUpperCase()` 비교), 종목명 정제 (`cleanName()` — " - " 이후·Inc./Corp./Ltd. 등 접미사 제거), 결과 표시 "Apple (AAPL)" 형태
+- JPA 로그 정리: `spring.jpa.show-sql=false`, `spring.jpa.open-in-view=false`
 
 ## Key Design Notes
 
