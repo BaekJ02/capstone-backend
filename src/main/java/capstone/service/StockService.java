@@ -453,7 +453,7 @@ public class StockService {
         dto.setTotalBidQty(output1.get("total_bidp_rsqn"));
 
         List<OrderBookDto.OrderBookEntry> asks = new ArrayList<>();
-        for (int i = 5; i >= 1; i--) {
+        for (int i = 10; i >= 1; i--) {
             OrderBookDto.OrderBookEntry entry = new OrderBookDto.OrderBookEntry();
             entry.setPrice(output1.get("askp" + i));
             entry.setQuantity(output1.get("askp_rsqn" + i));
@@ -462,7 +462,7 @@ public class StockService {
         dto.setAsks(asks);
 
         List<OrderBookDto.OrderBookEntry> bids = new ArrayList<>();
-        for (int i = 1; i <= 5; i++) {
+        for (int i = 1; i <= 10; i++) {
             OrderBookDto.OrderBookEntry entry = new OrderBookDto.OrderBookEntry();
             entry.setPrice(output1.get("bidp" + i));
             entry.setQuantity(output1.get("bidp_rsqn" + i));

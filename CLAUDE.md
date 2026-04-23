@@ -113,6 +113,13 @@ STOMP over SockJS. Clients send to `/app/subscribe/domestic` or `/app/subscribe/
 - 미국주식 검색 개선: 대소문자 무관 검색 (`toUpperCase()` 비교), 종목명 정제 (`cleanName()` — " - " 이후·Inc./Corp./Ltd. 등 접미사 제거), 결과 표시 "Apple (AAPL)" 형태
 - JPA 로그 정리: `spring.jpa.show-sql=false`, `spring.jpa.open-in-view=false`
 
+## 알려진 이슈
+
+- 국내주식 호가창 잔량 1/2 문제:
+  - REST API(FHKST01010200), 웹소켓(H0STASP0) 모두 실제값의 약 1/2 반환
+  - KIS 오픈API 한계로 추정, 코드 자체는 정상
+  - `handleOrderBook`: 호가 1건=62필드, 매도호가[3~12], 매수호가[13~22], 매도잔량[23~32], 매수잔량[33~42]
+
 ## Key Design Notes
 
 - `StockSearchService` searches across KOSPI, KOSDAQ, ETF, NASDAQ, and NYSE using CSV data parsed with OpenCSV.

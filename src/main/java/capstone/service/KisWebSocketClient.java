@@ -36,7 +36,6 @@ public class KisWebSocketClient {
     private final Set<String> subscribedOverseasSymbols = ConcurrentHashMap.newKeySet();
     private boolean connected = false;
     private final AtomicInteger hdfscnt0LogCount = new AtomicInteger(0);
-    private final AtomicInteger orderBookLogCount = new AtomicInteger(0);
 
     @PostConstruct
     public void init() {
@@ -208,12 +207,6 @@ public class KisWebSocketClient {
         if (fields.length < 62) return;
         int dataCount = fields.length / 62;
         int offset = (dataCount - 1) * 62;
-        if (orderBookLogCount.getAndIncrement() == 0) {
-            log.info("[호가raw] length={}, 매도1호가={}, 매도1잔량={}, 매수1호가={}, 매수1잔량={}",
-                    fields.length,
-                    fields[3], fields[23],
-                    fields[13], fields[33]);
-        }
         String symbol = fields[offset];
 
         OrderBookDto dto = new OrderBookDto();

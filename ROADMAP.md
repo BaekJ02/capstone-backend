@@ -50,6 +50,18 @@
 - 환율 API URL 변경 (oapi.koreaexim.go.kr)
 - 미국주식 검색 개선 (대소문자 무관, 종목명 간소화 - Inc./Corp. 등 제거, "Apple (AAPL)" 형태)
 - Hibernate 반복 로그 제거 (open-in-view=false, show-sql=false)
+- 국내주식 호가창 REST API 10단계로 확장 (기존 5단계)
+- 호가창 잔량 합계 표시 수정
+
+---
+
+## ⚠️ 알려진 이슈 / 한계
+
+- 국내주식 호가창 잔량이 실제 값의 약 1/2로 표시됨
+  - REST API(FHKST01010200)와 웹소켓(H0STASP0) 모두 동일한 현상
+  - KIS 오픈API 데이터 제공 방식의 한계로 추정 (토스증권 등 전문 금융기관과 다른 데이터)
+  - 코드 자체는 정확하게 구현되어 있음
+  - 향후 원인 파악 후 수정 예정 (KIS Developers Q&A 문의 고려)
 
 ---
 
