@@ -18,8 +18,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew clean
 ```
 
-H2 console is available at `http://localhost:8080/h2-console` when running locally (JDBC URL: `jdbc:h2:file:./data/capstone`, no password).
-
 ## Architecture
 
 Spring Boot backend for a stock trading simulation platform. No frontend code lives here — the frontend (Vite on port 5173) is a separate repo.
@@ -72,8 +70,7 @@ STOMP over SockJS. Clients send to `/app/subscribe/domestic` or `/app/subscribe/
 
 ### Database
 
-- **Development:** H2 file-based at `./data/capstone` (DDL auto-update, no migration needed)
-- **Production target:** MySQL (driver included, not yet wired up)
+- **Development/Production:** MySQL (`jdbc:mysql://localhost:3306/capstone`), DDL auto-update
 
 ### CORS
 
