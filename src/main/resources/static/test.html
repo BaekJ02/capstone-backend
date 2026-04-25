@@ -6,6 +6,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.0/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
     <style>
         :root {
             --bg: #0d1117;
@@ -256,6 +257,276 @@
             font-size: 13px;
             margin-bottom: 28px;
         }
+
+        /* ===== AI 챗봇 ===== */
+        #aiFloatBtn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2f81f7, #1a5bbf);
+            color: white;
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(47,129,247,0.4);
+            border: none;
+            margin: 0;
+            padding: 0;
+            z-index: 999;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        #aiFloatBtn:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 8px 28px rgba(47,129,247,0.5);
+            opacity: 1;
+        }
+
+        #aiChatPanel {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            width: 380px;
+            height: 580px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            z-index: 998;
+            overflow: hidden;
+            transform: translateY(20px);
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.25s ease, opacity 0.25s ease;
+        }
+        #aiChatPanel.open {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        #aiChatHeader {
+            padding: 14px 16px;
+            background: linear-gradient(135deg, #1a3a6e, #1f4f9e);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        #aiChatHeader .ai-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            color: white;
+        }
+        #aiChatHeader .ai-title span {
+            font-size: 18px;
+        }
+        #aiChatClose {
+            background: transparent;
+            border: none;
+            color: rgba(255,255,255,0.7);
+            font-size: 18px;
+            cursor: pointer;
+            padding: 2px 6px;
+            margin: 0;
+            border-radius: 4px;
+            line-height: 1;
+            transition: color 0.15s, background 0.15s;
+        }
+        #aiChatClose:hover { color: white; background: rgba(255,255,255,0.1); transform: none; opacity: 1; }
+
+        #aiChatMessages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .ai-msg {
+            display: flex;
+            flex-direction: column;
+            max-width: 85%;
+            animation: fadeIn 0.2s ease;
+        }
+        .ai-msg.user { align-self: flex-end; align-items: flex-end; }
+        .ai-msg.assistant { align-self: flex-start; align-items: flex-start; }
+
+        .ai-msg-bubble {
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            line-height: 1.6;
+            word-break: break-word;
+        }
+        .ai-msg.user .ai-msg-bubble {
+            background: var(--accent);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .ai-msg.assistant .ai-msg-bubble {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 4px;
+        }
+
+        .ai-msg-time {
+            font-size: 10px;
+            color: var(--text-sub);
+            margin-top: 4px;
+            padding: 0 4px;
+        }
+
+        .ai-loading-bubble {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            border-bottom-left-radius: 4px;
+            padding: 12px 16px;
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        .ai-loading-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--text-sub);
+            animation: dotBounce 1.2s infinite ease-in-out;
+        }
+        .ai-loading-dot:nth-child(1) { animation-delay: 0s; }
+        .ai-loading-dot:nth-child(2) { animation-delay: 0.2s; }
+        .ai-loading-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes dotBounce {
+            0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        #aiChatInputArea {
+            padding: 12px 14px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+            flex-shrink: 0;
+            background: var(--surface);
+        }
+        #aiChatInput {
+            flex: 1;
+            padding: 9px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface2);
+            color: var(--text);
+            font-size: 13px;
+            font-family: 'Pretendard', sans-serif;
+            resize: none;
+            outline: none;
+            margin: 0;
+            line-height: 1.5;
+            max-height: 100px;
+            overflow-y: auto;
+            transition: border-color 0.2s;
+        }
+        #aiChatInput:focus { border-color: var(--accent); }
+        #aiChatSendBtn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: var(--accent);
+            color: white;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: none;
+            margin: 0;
+            padding: 0;
+            flex-shrink: 0;
+            transition: background 0.15s, transform 0.15s;
+        }
+        #aiChatSendBtn:hover { background: #1a5bbf; transform: translateY(-1px); opacity: 1; }
+        #aiChatSendBtn:disabled { background: var(--border); cursor: not-allowed; transform: none; }
+
+        .ai-msg.assistant .ai-msg-bubble h1,
+        .ai-msg.assistant .ai-msg-bubble h2,
+        .ai-msg.assistant .ai-msg-bubble h3 {
+            font-size: 13px;
+            font-weight: 700;
+            margin: 10px 0 4px;
+            color: var(--text);
+        }
+        .ai-msg.assistant .ai-msg-bubble h2 { font-size: 13px; }
+        .ai-msg.assistant .ai-msg-bubble h3 { font-size: 12px; color: var(--text-sub); }
+        .ai-msg.assistant .ai-msg-bubble p { margin: 4px 0; }
+        .ai-msg.assistant .ai-msg-bubble ul,
+        .ai-msg.assistant .ai-msg-bubble ol {
+            padding-left: 16px;
+            margin: 4px 0;
+        }
+        .ai-msg.assistant .ai-msg-bubble li { margin: 2px 0; }
+        .ai-msg.assistant .ai-msg-bubble strong { color: var(--text); font-weight: 700; }
+        .ai-msg.assistant .ai-msg-bubble em { color: var(--text-sub); }
+        .ai-msg.assistant .ai-msg-bubble hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 8px 0;
+        }
+        .ai-msg.assistant .ai-msg-bubble table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 6px 0;
+            font-size: 12px;
+        }
+        .ai-msg.assistant .ai-msg-bubble th {
+            background: var(--surface);
+            padding: 5px 8px;
+            text-align: left;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            color: var(--text-sub);
+        }
+        .ai-msg.assistant .ai-msg-bubble td {
+            padding: 5px 8px;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+        .ai-msg.assistant .ai-msg-bubble code {
+            background: var(--surface);
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--accent);
+        }
+        .ai-msg.assistant .ai-msg-bubble blockquote {
+            border-left: 3px solid var(--accent);
+            padding-left: 10px;
+            margin: 6px 0;
+            color: var(--text-sub);
+            font-size: 12px;
+        }
+        text-align: center;
+        padding: 20px 10px;
+        color: var(--text-sub);
+        font-size: 13px;
+        line-height: 1.6;
+        }
+        .ai-welcome .ai-welcome-icon { font-size: 32px; margin-bottom: 8px; }
+        .ai-welcome .ai-welcome-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
     </style>
 </head>
 <body>
@@ -426,8 +697,6 @@
                 <h3>⭐ 관심 종목</h3>
                 <button class="btn-secondary" onclick="loadWatchlist()" style="font-size:12px;padding:6px 12px">새로고침</button>
             </div>
-
-            <!-- 추가 폼 -->
             <div style="display:flex;gap:8px;margin-bottom:16px;align-items:flex-start;flex-wrap:wrap">
                 <div style="flex:1;min-width:140px">
                     <input id="watchKeyword" placeholder="종목명 검색 (예: 삼성)" oninput="searchWatch()" style="margin-bottom:0" />
@@ -439,8 +708,6 @@
                 <button class="btn-watch" onclick="addWatchlist()" style="white-space:nowrap;margin:0;height:38px">+ 추가</button>
             </div>
             <div id="watchStatus"></div>
-
-            <!-- 관심종목 카드 목록 -->
             <div class="watchlist-grid" id="watchlistItems">
                 <div class="watch-empty">관심 종목을 추가해보세요 ⭐</div>
             </div>
@@ -477,44 +744,54 @@
                 <button class="tab-btn active" onclick="showTab('holdings')">📦 보유 종목</button>
                 <button class="tab-btn" onclick="showTab('orders')">📋 주문 내역</button>
             </div>
-
-            <!-- 보유 종목 -->
             <div id="holdingsTab">
                 <button class="btn-secondary" onclick="loadHoldings()" style="margin-bottom:12px">새로고침</button>
                 <table>
                     <thead>
                     <tr>
-                        <th>종목</th>
-                        <th>시장</th>
-                        <th>보유수량</th>
-                        <th>평균단가</th>
-                        <th>현재가</th>
-                        <th>평가금액</th>
-                        <th>수익률</th>
+                        <th>종목</th><th>시장</th><th>보유수량</th><th>평균단가</th><th>현재가</th><th>평가금액</th><th>수익률</th>
                     </tr>
                     </thead>
                     <tbody id="holdingsTable"><tr><td colspan="7" style="text-align:center;color:var(--text-sub)">데이터 없음</td></tr></tbody>
                 </table>
             </div>
-
-            <!-- 주문 내역 -->
             <div id="ordersTab" class="hidden">
                 <button class="btn-secondary" onclick="loadOrders()" style="margin-bottom:12px">새로고침</button>
                 <table>
                     <thead>
                     <tr>
-                        <th>시간</th>
-                        <th>종목</th>
-                        <th>구분</th>
-                        <th>수량</th>
-                        <th>가격</th>
-                        <th>금액</th>
+                        <th>시간</th><th>종목</th><th>구분</th><th>수량</th><th>가격</th><th>금액</th>
                     </tr>
                     </thead>
                     <tbody id="ordersTable"><tr><td colspan="6" style="text-align:center;color:var(--text-sub)">데이터 없음</td></tr></tbody>
                 </table>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- AI 챗봇 플로팅 버튼 -->
+<button id="aiFloatBtn" onclick="toggleAiChat()" title="AI 주식 어시스턴트">✨</button>
+
+<!-- AI 챗봇 패널 -->
+<div id="aiChatPanel">
+    <div id="aiChatHeader">
+        <div class="ai-title">
+            <span>✨</span>
+            AI 주식 어시스턴트
+        </div>
+        <button id="aiChatClose" onclick="toggleAiChat()">✕</button>
+    </div>
+    <div id="aiChatMessages">
+        <div class="ai-welcome">
+            <div class="ai-welcome-icon">📈</div>
+            <div class="ai-welcome-title">AI 주식 어시스턴트</div>
+            <div>주식 전망, 포트폴리오 분석 등 투자 관련 궁금한 점을 자유롭게 물어보세요.<br><br>모든 분석은 <b>참고용</b>이며 최종 투자 결정은 본인의 판단으로 하세요.</div>
+        </div>
+    </div>
+    <div id="aiChatInputArea">
+        <textarea id="aiChatInput" placeholder="메시지를 입력하세요..." rows="1"></textarea>
+        <button id="aiChatSendBtn" onclick="sendAiMessage()">➤</button>
     </div>
 </div>
 
@@ -540,7 +817,6 @@
 
     stompClient.connect({}, () => console.log('WebSocket 연결 성공'));
 
-    // 페이지 로드 시 토큰으로 자동 로그인 복원
     (async function restoreSession() {
         const token = localStorage.getItem('token');
         if (token) {
@@ -567,9 +843,7 @@
         return 'AMS';
     }
 
-    function formatNumber(n) {
-        return Number(n).toLocaleString();
-    }
+    function formatNumber(n) { return Number(n).toLocaleString(); }
 
     function showStatus(id, msg, isError = false) {
         const el = document.getElementById(id);
@@ -578,7 +852,6 @@
         setTimeout(() => { el.textContent = ''; el.className = ''; }, 3000);
     }
 
-    // 로그인 탭 전환
     function switchAuthTab(tab) {
         document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
         document.getElementById('signupForm').classList.toggle('hidden', tab !== 'signup');
@@ -586,7 +859,6 @@
         document.getElementById('authTab2').classList.toggle('active', tab === 'signup');
     }
 
-    // 회원가입
     async function signup() {
         const res = await fetch(`${BASE}/api/users/signup`, {
             method: 'POST',
@@ -606,7 +878,6 @@
         return token ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
     }
 
-    // 로그인
     async function login() {
         const res = await fetch(`${BASE}/api/users/login`, {
             method: 'POST',
@@ -633,14 +904,12 @@
         }
     }
 
-    // 로그아웃
     function logout() {
         localStorage.removeItem('token');
         document.getElementById('authCard').classList.remove('hidden');
         document.getElementById('mainContent').classList.add('hidden');
     }
 
-    // 내 정보 조회
     async function loadMyInfo() {
         const res = await fetch(`${BASE}/api/users/me`, { headers: authHeaders() });
         const data = await res.json();
@@ -681,7 +950,7 @@
                 document.getElementById('userBalance').textContent = formatNumber(currentKrwBalance);
                 document.getElementById('userDollarBalance').textContent = currentDollarBalance.toFixed(2);
             }
-        } catch (e) { /* 캐시 값 사용 */ }
+        } catch (e) {}
 
         if (!currentExchangeRate) {
             try {
@@ -691,7 +960,7 @@
                     currentExchangeRate = rateData.rate;
                     document.getElementById('currentRate').textContent = formatNumber(currentExchangeRate);
                 }
-            } catch (e) { /* 기본값 유지 */ }
+            } catch (e) {}
         }
 
         const dollarInKrw = currentDollarBalance * currentExchangeRate;
@@ -748,7 +1017,6 @@
         }
     }
 
-    // 국내 주식 검색
     function searchDomestic() {
         const keyword = document.getElementById('domesticKeyword').value;
         if (keyword.length < 1) { document.getElementById('domesticSearchResults').innerHTML = ''; return; }
@@ -764,7 +1032,6 @@
             });
     }
 
-    // 미국 주식 검색
     function searchOverseas() {
         const keyword = document.getElementById('overseasKeyword').value;
         if (keyword.length < 1) { document.getElementById('overseasSearchResults').innerHTML = ''; return; }
@@ -780,7 +1047,6 @@
             });
     }
 
-    // 관심종목용 검색
     function searchWatch() {
         const keyword = document.getElementById('watchKeyword').value;
         if (keyword.length < 1) { document.getElementById('watchSearchResults').innerHTML = ''; return; }
@@ -803,7 +1069,6 @@
         document.getElementById('watchSearchResults').innerHTML = '';
     }
 
-    // 국내 주식 선택
     function selectDomestic(symbol, name, market) {
         domSymbol = symbol; domMarket = market;
         document.getElementById('domesticKeyword').value = name;
@@ -830,30 +1095,25 @@
             updateTradeTotal();
         });
 
-        // 호가창 표시
         document.getElementById('orderBookCard').style.display = '';
         document.getElementById('orderBookTitle').textContent = `${name} 호가`;
         document.getElementById('tradeTickList').innerHTML = '<div style="color:var(--text-sub);text-align:center;padding:20px">체결 내역 없음</div>';
 
-        // 초기 호가 REST 로드
         fetch(`${BASE}/api/stocks/orderbook/domestic/${symbol}`)
             .then(r => r.json())
             .then(data => renderOrderBook(data, symbol));
 
-        // 호가 웹소켓 구독
         if (subscriptions['orderbook']) subscriptions['orderbook'].unsubscribe();
         subscriptions['orderbook'] = stompClient.subscribe(`/topic/orderbook/${symbol}`, msg => {
             renderOrderBook(JSON.parse(msg.body), symbol);
         });
 
-        // 체결 웹소켓 구독
         if (subscriptions['tradetick']) subscriptions['tradetick'].unsubscribe();
         subscriptions['tradetick'] = stompClient.subscribe(`/topic/tradetick/${symbol}`, msg => {
             addTradeTick(JSON.parse(msg.body));
         });
     }
 
-    // 미국 주식 선택
     function selectOverseas(symbol, name, market) {
         ovsSymbol = symbol; ovsMarket = market; ovsExchange = getExchangeCode(market);
         document.getElementById('overseasKeyword').value = name;
@@ -913,7 +1173,6 @@
             ...data.bids.map(e => parseInt(e.quantity) || 0),
             1
         );
-
         document.getElementById('askBody').innerHTML = data.asks.map(e => {
             const w = Math.round((parseInt(e.quantity) || 0) / maxQty * 100);
             return `<tr class="ask-row">
@@ -922,7 +1181,6 @@
                 <td class="price">₩${formatNumber(e.price)}</td>
             </tr>`;
         }).join('');
-
         document.getElementById('bidBody').innerHTML = data.bids.map(e => {
             const w = Math.round((parseInt(e.quantity) || 0) / maxQty * 100);
             return `<tr class="bid-row">
@@ -931,7 +1189,6 @@
                 <td class="qty">${formatNumber(e.quantity)}</td>
             </tr>`;
         }).join('');
-
         const cur = currentPrices[symbol];
         document.getElementById('currentPriceDivider').textContent = cur ? `₩${formatNumber(cur)}` : '';
         const totalAskQty = data.asks.reduce((sum, e) => { const q = parseInt(e.quantity); return sum + (isNaN(q) ? 0 : q); }, 0);
@@ -944,7 +1201,6 @@
         const list = document.getElementById('tradeTickList');
         const empty = list.querySelector('div[style*="text-align:center"]');
         if (empty) empty.remove();
-
         const cls = data.side === 'BUY' ? 'tick-buy' : 'tick-sell';
         const label = data.side === 'BUY' ? '매수' : '매도';
         const time = data.time ? data.time.replace(/(\d{2})(\d{2})(\d{2})/, '$1:$2:$3') : '';
@@ -952,7 +1208,6 @@
         row.className = `tick-row ${cls}`;
         row.innerHTML = `<span>${time}</span><span>₩${formatNumber(data.price)}</span><span>${formatNumber(data.quantity)}주</span><span>${label}</span>`;
         list.insertBefore(row, list.firstChild);
-
         while (list.children.length > 50) list.removeChild(list.lastChild);
     }
 
@@ -973,7 +1228,6 @@
     document.getElementById('tradePrice')?.addEventListener('input', updateTradeTotal);
     document.getElementById('tradeQuantity')?.addEventListener('input', updateTradeTotal);
 
-    // 매매
     async function trade(type) {
         const dto = {
             symbol: document.getElementById('tradeSymbol').value,
@@ -1001,13 +1255,11 @@
         if (res.ok) { updateBalance(); loadHoldings(); }
     }
 
-    // ===== 관심종목 =====
     async function addWatchlist() {
         const symbol = document.getElementById('watchSymbol').value;
         const name = document.getElementById('watchName').value;
         const market = document.getElementById('watchMarket').value;
         if (!symbol || !name) { showStatus('watchStatus', '종목을 검색해서 선택해주세요.', true); return; }
-
         const res = await fetch(`${BASE}/api/watchlist`, {
             method: 'POST',
             headers: authHeaders(),
@@ -1025,10 +1277,7 @@
     }
 
     async function removeWatchlist(symbol) {
-        const res = await fetch(`${BASE}/api/watchlist/${symbol}`, {
-            method: 'DELETE',
-            headers: authHeaders()
-        });
+        const res = await fetch(`${BASE}/api/watchlist/${symbol}`, { method: 'DELETE', headers: authHeaders() });
         const text = await res.text();
         showStatus('watchStatus', text, !res.ok);
         if (res.ok) loadWatchlist();
@@ -1056,19 +1305,16 @@
         `).join('');
     }
 
-    // 보유 종목 조회 (최초 1회 + 새로고침 버튼)
     async function loadHoldings() {
         const res = await fetch(`${BASE}/api/trade/holdings`, { headers: authHeaders() });
         const data = await res.json();
         holdingsData = data;
         const tbody = document.getElementById('holdingsTable');
-
         if (!data.length) {
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-sub)">보유 종목 없음</td></tr>';
             document.getElementById('portfolioSummary').innerHTML = '<span style="color:var(--text-sub)">보유 종목 없음</span>';
             return;
         }
-
         tbody.innerHTML = data.map(h => {
             const ovs = isOverseas(h.market);
             const currentPrice = currentPrices[h.symbol] || h.avgPrice;
@@ -1087,9 +1333,7 @@
                 <td class="${cls}" style="font-family:'JetBrains Mono',monospace;font-weight:600">${profit >= 0 ? '+' : ''}${profitRate}%</td>
             </tr>`;
         }).join('');
-
         updatePortfolioSummary();
-
         data.forEach(h => {
             if (!subscriptions[h.symbol]) {
                 if (['KOSPI','KOSDAQ','ETF'].includes(h.market)) {
@@ -1110,27 +1354,22 @@
         });
     }
 
-    // WebSocket 가격 수신 시 해당 행만 DOM 업데이트
     function updateHoldingRow(symbol) {
         const h = holdingsData.find(x => x.symbol === symbol);
         if (!h) return;
-
         const tr = document.querySelector(`#holdingsTable tr[data-symbol="${symbol}"]`);
         if (!tr) return;
-
         const currentPrice = currentPrices[symbol] || h.avgPrice;
         const evalAmount = currentPrice * h.quantity;
         const buyAmount = h.avgPrice * h.quantity;
         const profit = evalAmount - buyAmount;
         const profitRate = ((profit / buyAmount) * 100).toFixed(2);
         const cls = profit >= 0 ? 'price-up' : 'price-down';
-
         const ovs = isOverseas(h.market);
         tr.cells[4].textContent = ovs ? `$${currentPrice.toFixed(2)}` : `₩${formatNumber(currentPrice)}`;
         tr.cells[5].textContent = ovs ? `$${evalAmount.toFixed(2)}` : `₩${formatNumber(Math.round(evalAmount))}`;
         tr.cells[6].className = cls;
         tr.cells[6].textContent = (profit >= 0 ? '+' : '') + profitRate + '%';
-
         updatePortfolioSummary();
     }
 
@@ -1157,7 +1396,6 @@
         updateTotalAssets();
     }
 
-    // 주문 내역 조회
     async function loadOrders() {
         const res = await fetch(`${BASE}/api/trade/orders`, { headers: authHeaders() });
         const data = await res.json();
@@ -1183,7 +1421,6 @@
         }).join('');
     }
 
-    // 판매수익 조회
     async function loadProfit(period) {
         document.querySelectorAll('#profitTabs .tab-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.period === period);
@@ -1191,13 +1428,11 @@
         const res = await fetch(`${BASE}/api/trade/profit?period=${period}`, { headers: authHeaders() });
         if (!res.ok) return;
         const data = await res.json();
-
         const totalEl = document.getElementById('profitTotal');
         const cls = data.totalProfit >= 0 ? 'price-up' : 'price-down';
         totalEl.className = cls;
         totalEl.style.fontSize = '28px'; totalEl.style.fontWeight = '700'; totalEl.style.fontFamily = "'JetBrains Mono',monospace"; totalEl.style.marginBottom = '16px';
         totalEl.textContent = (data.totalProfit >= 0 ? '+' : '') + '₩' + formatNumber(Math.round(data.totalProfit));
-
         const tbody = document.getElementById('profitTable');
         if (!data.profitList.length) {
             tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-sub)">매도 내역 없음</td></tr>';
@@ -1221,7 +1456,6 @@
         }).join('');
     }
 
-    // 탭 전환
     function showTab(tab) {
         document.getElementById('holdingsTab').classList.toggle('hidden', tab !== 'holdings');
         document.getElementById('ordersTab').classList.toggle('hidden', tab !== 'orders');
@@ -1230,6 +1464,132 @@
         });
         if (tab === 'orders') loadOrders();
     }
+
+    // ===== AI 챗봇 =====
+    let aiChatOpen = false;
+    let aiHistory = [];
+    let aiIsLoading = false;
+
+    function toggleAiChat() {
+        aiChatOpen = !aiChatOpen;
+        const panel = document.getElementById('aiChatPanel');
+        panel.classList.toggle('open', aiChatOpen);
+        if (aiChatOpen) {
+            setTimeout(() => document.getElementById('aiChatInput').focus(), 300);
+        }
+    }
+
+    function getTimeString() {
+        const now = new Date();
+        return now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function appendMessage(role, content) {
+        const messages = document.getElementById('aiChatMessages');
+        // 웰컴 메시지 제거
+        const welcome = messages.querySelector('.ai-welcome');
+        if (welcome) welcome.remove();
+
+        const div = document.createElement('div');
+        div.className = `ai-msg ${role}`;
+
+        const bubble = document.createElement('div');
+        bubble.className = 'ai-msg-bubble';
+        bubble.innerHTML = role === 'assistant'
+            ? marked.parse(content)
+            : content.replace(/\n/g, '<br>');
+
+        const time = document.createElement('div');
+        time.className = 'ai-msg-time';
+        time.textContent = getTimeString();
+
+        div.appendChild(bubble);
+        div.appendChild(time);
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+        return div;
+    }
+
+    function showLoadingBubble() {
+        const messages = document.getElementById('aiChatMessages');
+        const div = document.createElement('div');
+        div.className = 'ai-msg assistant';
+        div.id = 'aiLoadingMsg';
+        div.innerHTML = `<div class="ai-loading-bubble">
+            <div class="ai-loading-dot"></div>
+            <div class="ai-loading-dot"></div>
+            <div class="ai-loading-dot"></div>
+        </div>`;
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+    }
+
+    function removeLoadingBubble() {
+        const loading = document.getElementById('aiLoadingMsg');
+        if (loading) loading.remove();
+    }
+
+    async function sendAiMessage() {
+        if (aiIsLoading) return;
+        const input = document.getElementById('aiChatInput');
+        const message = input.value.trim();
+        if (!message) return;
+
+        const token = localStorage.getItem('token');
+        if (!token) {
+            appendMessage('assistant', '⚠️ 로그인 후 이용 가능합니다.');
+            return;
+        }
+
+        input.value = '';
+        input.style.height = 'auto';
+        appendMessage('user', message);
+
+        aiIsLoading = true;
+        document.getElementById('aiChatSendBtn').disabled = true;
+        showLoadingBubble();
+
+        try {
+            const res = await fetch(`${BASE}/api/ai/chat`, {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({ message, history: aiHistory })
+            });
+            const data = await res.json();
+            removeLoadingBubble();
+
+            const reply = data.message || '응답을 받지 못했습니다.';
+            appendMessage('assistant', reply);
+
+            // 대화 기록 업데이트
+            aiHistory.push({ role: 'user', content: message });
+            aiHistory.push({ role: 'assistant', content: reply });
+
+            // 대화 기록 최대 20개 유지 (10턴)
+            if (aiHistory.length > 20) aiHistory = aiHistory.slice(-20);
+        } catch (e) {
+            removeLoadingBubble();
+            appendMessage('assistant', '⚠️ 오류가 발생했습니다. 다시 시도해주세요.');
+        }
+
+        aiIsLoading = false;
+        document.getElementById('aiChatSendBtn').disabled = false;
+        input.focus();
+    }
+
+    // Enter 키 전송 (Shift+Enter는 줄바꿈)
+    document.getElementById('aiChatInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendAiMessage();
+        }
+    });
+
+    // 입력창 자동 높이 조절
+    document.getElementById('aiChatInput').addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+    });
 </script>
 </body>
 </html>

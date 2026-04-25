@@ -45,6 +45,7 @@ kis.api.secret=YOUR_SECRET
 jwt.secret=YOUR_JWT_SECRET
 fmp.api.key=YOUR_FMP_KEY
 koreaexim.api.key=YOUR_EXIM_KEY
+claude.api.key=YOUR_CLAUDE_KEY
 ```
 
 **FMP (Financial Modeling Prep)** — 미국주식 재무데이터 전용:
@@ -109,6 +110,12 @@ STOMP over SockJS. Clients send to `/app/subscribe/domestic` or `/app/subscribe/
 - 미국주식 금액 $ 표시: `isOverseas(market)` / `isOverseasSymbol(symbol)` 분기, `fmtMoney()` 헬퍼
 - 미국주식 검색 개선: 대소문자 무관 검색 (`toUpperCase()` 비교), 종목명 정제 (`cleanName()` — " - " 이후·Inc./Corp./Ltd. 등 접미사 제거), 결과 표시 "Apple (AAPL)" 형태
 - JPA 로그 정리: `spring.jpa.show-sql=false`, `spring.jpa.open-in-view=false`
+- AI 챗봇: `AiController`, `AiService` 구현
+  - POST /api/ai/chat (로그인 필요)
+  - 멀티턴 대화 지원 (history 파라미터)
+  - 모델: claude-haiku-4-5-20251001
+  - 시스템 프롬프트: 주식 투자 전문 어시스턴트, 참고용 답변만 제공
+  - WebClient로 Anthropic API 호출 (https://api.anthropic.com/v1/messages)
 
 ## 알려진 이슈
 

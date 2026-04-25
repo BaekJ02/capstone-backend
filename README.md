@@ -639,6 +639,40 @@ POST {ngrok주소}/api/exchange/usd-to-krw
 
 ---
 
+### 🤖 AI 챗봇 API
+
+> ⚠️ 로그인 후에 사용 가능해요.
+
+#### AI 채팅
+
+```
+POST {ngrok주소}/api/ai/chat
+```
+
+**요청 Body**
+```json
+{
+    "message": "삼성전자 전망 어때?",
+    "history": [
+        {"role": "user", "content": "이전 질문"},
+        {"role": "assistant", "content": "이전 답변"}
+    ]
+}
+```
+
+**응답**
+```json
+{
+    "message": "AI 답변 내용..."
+}
+```
+
+- `history`는 이전 대화 기록 (멀티턴 방식)
+- history가 없으면 빈 배열(`[]`)로 보내주세요
+- 모든 분석은 참고용이며 최종 투자 결정은 사용자 본인의 판단으로 해야 해요
+
+---
+
 ## WebSocket 실시간 데이터
 
 ### 연결 방법
