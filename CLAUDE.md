@@ -116,6 +116,13 @@ STOMP over SockJS. Clients send to `/app/subscribe/domestic` or `/app/subscribe/
   - 모델: claude-haiku-4-5-20251001
   - 시스템 프롬프트: 주식 투자 전문 어시스턴트, 참고용 답변만 제공
   - WebClient로 Anthropic API 호출 (https://api.anthropic.com/v1/messages)
+- AI 포트폴리오 분석: `AiController.buildHoldingsText()` — StockService로 실시간 현재가 조회 후 수익률 계산
+  - POST /api/ai/analyze/holdings → 종목별 개별 분석
+  - POST /api/ai/analyze/portfolio → 포트폴리오 전체 분석
+  - POST /api/ai/analyze/recommend → 섹터/종목 추천
+  - 국내주식: getDomesticStockPrice(), 미국주식: getOverseasStockPrice() 호출
+  - 현재가 조회 실패 시 avgPrice fallback 처리
+  - max_tokens: 2048 (챗봇보다 길게 설정)
 
 ## 알려진 이슈
 
