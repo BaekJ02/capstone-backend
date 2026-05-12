@@ -121,7 +121,7 @@ public class MarketRankingService {
             if ("FALL".equals(type)) {
                 endpoint = "/biggest-losers";
             } else if ("VOLUME".equals(type)) {
-                endpoint = "/most-active";
+                endpoint = "/most-actives";
             } else {
                 endpoint = "/biggest-gainers";
             }
