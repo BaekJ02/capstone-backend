@@ -108,6 +108,21 @@ public class MarketRankingService {
                         .volume(str(item, "acml_vol"))
                         .build());
             }
+            if ("VOLUME".equals(type)) {
+                result.sort((a, b) -> {
+                    try {
+                        return Long.compare(Long.parseLong(b.getVolume()), Long.parseLong(a.getVolume()));
+                    } catch (Exception e) { return 0; }
+                });
+            } else {
+                result.sort((a, b) -> {
+                    try {
+                        double va = Double.parseDouble(a.getChangePercent());
+                        double vb = Double.parseDouble(b.getChangePercent());
+                        return "FALL".equals(type) ? Double.compare(va, vb) : Double.compare(vb, va);
+                    } catch (Exception e) { return 0; }
+                });
+            }
             return result;
         } catch (Exception e) {
             log.error("국내 순위 조회 실패 [type={}]: {}", type, e.getMessage());
