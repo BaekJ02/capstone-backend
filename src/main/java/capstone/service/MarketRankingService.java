@@ -55,7 +55,11 @@ public class MarketRankingService {
                 sortClsCode = "0";
             }
 
-            String url = kisBaseUrl + "/uapi/domestic-stock/v1/quotations/inquire-price-ranking"
+            String endpoint = "VOLUME".equals(type)
+                    ? "/uapi/domestic-stock/v1/quotations/volume-rank"
+                    : "/uapi/domestic-stock/v1/quotations/inquire-price-rank";
+
+            String url = kisBaseUrl + endpoint
                     + "?fid_cond_mrkt_div_code=J"
                     + "&fid_cond_scr_div_code=" + scrDivCode
                     + "&fid_input_iscd=0000"
@@ -78,6 +82,7 @@ public class MarketRankingService {
             headers.set("tr_id", trId);
             headers.set("custtype", "P");
 
+            log.info("KIS 국내 순위 호출 [type={}] URL: {}", type, url);
             HttpEntity<Void> request = new HttpEntity<>(headers);
             Map<String, Object> response = restTemplate.exchange(url, HttpMethod.GET, request, Map.class).getBody();
 
