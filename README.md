@@ -726,6 +726,58 @@ POST {ngrok주소}/api/ai/analyze/recommend
 
 ---
 
+### 📊 시장 순위 API
+
+> ✅ 로그인 없이 누구나 사용 가능해요.
+
+#### 국내주식 순위
+
+```
+GET {ngrok주소}/api/market/domestic/ranking?type={타입}
+```
+
+| type | 의미 |
+|------|------|
+| RISE | 급상승 (등락률 내림차순) |
+| FALL | 급하락 (등락률 오름차순) |
+| VOLUME | 거래대금 (거래량 내림차순) |
+
+---
+
+#### 미국주식 순위
+
+```
+GET {ngrok주소}/api/market/overseas/ranking?type={타입}
+```
+
+| type | 의미 | FMP 엔드포인트 |
+|------|------|----------------|
+| RISE | 급상승 | /stable/biggest-gainers |
+| FALL | 급하락 | /stable/biggest-losers |
+| VOLUME | 거래량 | /stable/most-actives |
+
+---
+
+**응답 형식 (공통)**
+
+```json
+[
+    {
+        "symbol": "005930",
+        "name": "삼성전자",
+        "price": "75000",
+        "change": "1400",
+        "changePercent": "1.90",
+        "volume": "12345678"
+    }
+]
+```
+
+- 최대 20개 결과 반환
+- 백엔드에서 type별 정렬 처리 (RISE: 등락률 내림차순, FALL: 오름차순, VOLUME: 거래량 내림차순)
+
+---
+
 ## WebSocket 실시간 데이터
 
 ### 연결 방법

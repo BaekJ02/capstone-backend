@@ -56,6 +56,11 @@
 - Claude AI 챗봇 API 구현 (POST /api/ai/chat, 멀티턴 대화, claude-haiku-4-5-20251001 모델)
 - AI 포트폴리오 분석 API 구현 (POST /api/ai/analyze/holdings, /portfolio, /recommend)
 - AI 분석 시 실시간 현재가 기반 수익률 계산 (StockService 연동)
+- 시장 순위 API 구현 (MarketRankingController, MarketRankingService, RankingItemDto)
+  - 국내주식: KIS 등락률 순위(FHPST01700000, /ranking/fluctuation), 거래량 순위(FHPST01710000, /quotations/volume-rank)
+  - 미국주식: FMP biggest-gainers / biggest-losers / most-actives
+  - 엔드포인트: GET /api/market/domestic/ranking?type=, GET /api/market/overseas/ranking?type=
+  - 인증 불필요 (SecurityConfig permitAll 처리)
 
 ---
 
@@ -79,11 +84,12 @@
 
 ## 🚀 앞으로 구현하면 좋을 것들
 
-### 1. 시장 현황 기능
+### 1. ~~시장 현황 기능~~ ✅ 완료
 
 **TOP 거래대금 / 거래량 / 급상승 / 급하락**
-- 실시간으로 거래량이 많은 종목, 급등/급락 종목 리스트 제공
-- KIS API에서 데이터 제공 가능
+- ~~실시간으로 거래량이 많은 종목, 급등/급락 종목 리스트 제공~~
+- ~~KIS API에서 데이터 제공 가능~~
+- 국내(KIS) + 미국(FMP) 모두 구현 완료, 로그인 불필요
 
 ---
 

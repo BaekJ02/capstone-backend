@@ -48,10 +48,13 @@ koreaexim.api.key=YOUR_EXIM_KEY
 claude.api.key=YOUR_CLAUDE_KEY
 ```
 
-**FMP (Financial Modeling Prep)** — 미국주식 재무데이터 전용:
+**FMP (Financial Modeling Prep)** — 미국주식 재무데이터 + 순위:
 - `GET /stable/profile?symbol={symbol}&apikey={key}` → 시가총액(`marketCap`), 베타(`beta`), 52주 범위(`range`: `"low-high"` split), 배당금(`dividendYield` → fallback `lastDividend`), 거래량(`volume`)
 - `GET /stable/ratios-ttm?symbol={symbol}&apikey={key}` → PER(`priceToEarningsRatioTTM`), PBR(`priceToBookRatioTTM`)
 - PER, PBR은 `formatRatio()`로 소수점 2자리 반올림. null·빈값·파싱 불가 시 빈 문자열 반환
+- `GET /stable/biggest-gainers?apikey={key}` → 미국 급상승 순위
+- `GET /stable/biggest-losers?apikey={key}` → 미국 급하락 순위
+- `GET /stable/most-actives?apikey={key}` → 미국 거래량 순위
 
 ### Authentication
 
@@ -61,7 +64,7 @@ JWT (Bearer 토큰) 방식. 세션 방식은 제거됨.
 - 보호된 API 요청 시 헤더 필수: `Authorization: Bearer {token}`
 - `JwtTokenProvider` → 토큰 생성/파싱/검증 (HS256, 24시간 만료)
 - `JwtAuthenticationFilter` → `OncePerRequestFilter`, SecurityContextHolder에 userId(Long) 설정
-- `SecurityConfig` → `/api/users/signup`, `/api/users/login`, `/ws/**`, `/api/stocks/**`, `/h2-console/**` 인증 없이 허용; 나머지 `/api/**` 인증 필요
+- `SecurityConfig` → `/api/users/signup`, `/api/users/login`, `/ws/**`, `/api/stocks/**`, `/api/exchange/**`, `/api/market/**`, `/h2-console/**` 인증 없이 허용; 나머지 `/api/**` 인증 필요
 - 컨트롤러에서 userId 추출: `(Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal()`
 - 비밀번호: `BCryptPasswordEncoder`로 암호화 저장, `matches()`로 검증
 
@@ -123,6 +126,14 @@ STOMP over SockJS. Clients send to `/app/subscribe/domestic` or `/app/subscribe/
   - 국내주식: getDomesticStockPrice(), 미국주식: getOverseasStockPrice() 호출
   - 현재가 조회 실패 시 avgPrice fallback 처리
   - max_tokens: 2048 (챗봇보다 길게 설정)
+- 시장 순위: `MarketRankingController`, `MarketRankingService`, `RankingItemDto` 구현 (인증 불필요)
+  - GET /api/market/domestic/ranking?type=RISE|FALL|VOLUME → 국내주식 순위
+  - GET /api/market/overseas/ranking?type=RISE|FALL|VOLUME → 미국주식 순위
+  - 국내 RISE/FALL: KIS `/uapi/domestic-stock/v1/ranking/fluctuation` (tr_id: FHPST01700000), 파라미터 소문자 `fid_xxx`
+  - 국내 VOLUME: KIS `/uapi/domestic-stock/v1/quotations/volume-rank` (tr_id: FHPST01710000), 파라미터 대문자 `FID_XXX`, symbol 필드 `mksc_shrn_iscd`
+  - 미국: FMP `/stable/biggest-gainers`, `/stable/biggest-losers`, `/stable/most-actives`
+  - 백엔드 정렬: RISE=changePercent 내림차순, FALL=오름차순, VOLUME=volume 내림차순
+  - UriComponentsBuilder.fromUriString()으로 파라미터 빌드 (빈 값 인코딩 문제 방지)
 
 ## 알려진 이슈
 
