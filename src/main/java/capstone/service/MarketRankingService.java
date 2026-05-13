@@ -53,7 +53,7 @@ public class MarketRankingService {
                 params.put("FID_COND_SCR_DIV_CODE", "20171");
                 params.put("FID_INPUT_ISCD", "0000");
                 params.put("FID_DIV_CLS_CODE", "0");
-                params.put("FID_BLNG_CLS_CODE", "0");
+                params.put("FID_BLNG_CLS_CODE", "3");
                 params.put("FID_TRGT_CLS_CODE", "111111111");
                 params.put("FID_TRGT_EXLS_CLS_CODE", "0000000000");
                 params.put("FID_INPUT_PRICE_1", "");
