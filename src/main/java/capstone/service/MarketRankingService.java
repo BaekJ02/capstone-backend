@@ -105,7 +105,7 @@ public class MarketRankingService {
                         .price(str(item, "stck_prpr"))
                         .change(str(item, "prdy_vrss"))
                         .changePercent(str(item, "prdy_ctrt"))
-                        .volume(str(item, "acml_vol"))
+                        .volume(str(item, "VOLUME".equals(type) ? "acml_tr_pbmn" : "acml_vol"))
                         .build());
             }
             if ("VOLUME".equals(type)) {
