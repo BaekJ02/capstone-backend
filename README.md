@@ -740,7 +740,7 @@ GET {ngrok주소}/api/market/domestic/ranking?type={타입}
 |------|------|
 | RISE | 급상승 (등락률 내림차순) |
 | FALL | 급하락 (등락률 오름차순) |
-| VOLUME | 거래대금 (거래량 내림차순) |
+| VOLUME | 거래대금 (누적 거래대금 acml_tr_pbmn 기준 내림차순) |
 
 ---
 
@@ -774,7 +774,8 @@ GET {ngrok주소}/api/market/overseas/ranking?type={타입}
 ```
 
 - 최대 20개 결과 반환
-- 백엔드에서 type별 정렬 처리 (RISE: 등락률 내림차순, FALL: 오름차순, VOLUME: 거래량 내림차순)
+- 백엔드에서 type별 정렬 처리 (RISE: 등락률 내림차순, FALL: 오름차순, VOLUME: 누적 거래대금 내림차순)
+- 국내 VOLUME의 `volume` 필드는 누적 거래대금(원) 값임
 
 ---
 

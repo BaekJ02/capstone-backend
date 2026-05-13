@@ -61,6 +61,7 @@
   - 미국주식: FMP biggest-gainers / biggest-losers / most-actives
   - 엔드포인트: GET /api/market/domestic/ranking?type=, GET /api/market/overseas/ranking?type=
   - 인증 불필요 (SecurityConfig permitAll 처리)
+- 국내주식 거래대금 순위 정확도 수정 (FID_BLNG_CLS_CODE 0→3, volume 필드 acml_vol→acml_tr_pbmn으로 변경, 실제 거래금액 기준 정렬)
 
 ---
 
@@ -71,6 +72,9 @@
   - KIS 오픈API 데이터 제공 방식의 한계로 추정 (토스증권 등 전문 금융기관과 다른 데이터)
   - 코드 자체는 정확하게 구현되어 있음
   - 향후 원인 파악 후 수정 예정 (KIS Developers Q&A 문의 고려)
+- 정규장 마감 직전(15:27~15:30) KIS API 불안정 구간 존재
+  - 해당 시간대에 웹소켓 데이터가 일시적으로 끊기거나 NaN 표시될 수 있음
+  - 코드 버그가 아닌 KIS API 자체 특성 (동시호가 전환 구간)
 
 ---
 

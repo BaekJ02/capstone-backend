@@ -131,8 +131,10 @@ STOMP over SockJS. Clients send to `/app/subscribe/domestic` or `/app/subscribe/
   - GET /api/market/overseas/ranking?type=RISE|FALL|VOLUME → 미국주식 순위
   - 국내 RISE/FALL: KIS `/uapi/domestic-stock/v1/ranking/fluctuation` (tr_id: FHPST01700000), 파라미터 소문자 `fid_xxx`
   - 국내 VOLUME: KIS `/uapi/domestic-stock/v1/quotations/volume-rank` (tr_id: FHPST01710000), 파라미터 대문자 `FID_XXX`, symbol 필드 `mksc_shrn_iscd`
+    - `FID_BLNG_CLS_CODE=3` (거래금액순, 0=평균거래량)
+    - volume 필드: `acml_tr_pbmn` (누적 거래 대금, VOLUME 타입만 적용 / RISE·FALL은 `acml_vol`)
   - 미국: FMP `/stable/biggest-gainers`, `/stable/biggest-losers`, `/stable/most-actives`
-  - 백엔드 정렬: RISE=changePercent 내림차순, FALL=오름차순, VOLUME=volume 내림차순
+  - 백엔드 정렬: RISE=changePercent 내림차순, FALL=오름차순, VOLUME=acml_tr_pbmn 내림차순
   - UriComponentsBuilder.fromUriString()으로 파라미터 빌드 (빈 값 인코딩 문제 방지)
 
 ## 알려진 이슈
@@ -141,6 +143,9 @@ STOMP over SockJS. Clients send to `/app/subscribe/domestic` or `/app/subscribe/
   - REST API(FHKST01010200), 웹소켓(H0STASP0) 모두 실제값의 약 1/2 반환
   - KIS 오픈API 한계로 추정, 코드 자체는 정상
   - `handleOrderBook`: 호가 1건=62필드, 매도호가[3~12], 매수호가[13~22], 매도잔량[23~32], 매수잔량[33~42]
+- 정규장 마감 직전(15:27~15:30) KIS API 불안정 구간:
+  - 동시호가 전환 구간으로 웹소켓 데이터가 일시적으로 끊기거나 NaN 표시될 수 있음
+  - 코드 버그 아님, KIS API 자체 특성
 
 ## Key Design Notes
 
