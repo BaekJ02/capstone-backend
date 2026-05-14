@@ -146,6 +146,8 @@ STOMP over SockJS. Clients send to `/app/subscribe/domestic` or `/app/subscribe/
 - 정규장 마감 직전(15:27~15:30) KIS API 불안정 구간:
   - 동시호가 전환 구간으로 웹소켓 데이터가 일시적으로 끊기거나 NaN 표시될 수 있음
   - 코드 버그 아님, KIS API 자체 특성
+- 미국주식 호가창 및 실시간 체결 데이터: KIS 오픈API 미제공으로 구현 불가
+- 정규장 외 시간대 실시간 주가: KIS API 한계로 구현 불가 (3초 폴링 방식으로 대체 제공)
 
 ## Key Design Notes
 
