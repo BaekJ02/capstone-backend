@@ -30,12 +30,14 @@ public class KisAuthService {
     // 웹소켓 접속키 (approval_key)
     private String approvalKey;
 
-    public String getApprovalKey() {
+    public synchronized String getApprovalKey() {
         if (approvalKey != null) return approvalKey;
         return issueApprovalKey();
     }
 
-    private String issueApprovalKey() {
+    private synchronized String issueApprovalKey() {
+        if (approvalKey != null) return approvalKey;
+
         String url = baseUrl + "/oauth2/Approval";
 
         HttpHeaders headers = new HttpHeaders();
@@ -53,15 +55,19 @@ public class KisAuthService {
         return approvalKey;
     }
 
-    public String getAccessToken() {
-        // 토큰이 있고 만료 1시간 전까지는 재사용
+    public synchronized String getAccessToken() {
         if (accessToken != null && LocalDateTime.now().isBefore(tokenExpireTime.minusHours(1))) {
             return accessToken;
         }
         return issueAccessToken();
     }
 
-    private String issueAccessToken() {
+    private synchronized String issueAccessToken() {
+        // 이미 다른 쓰레드가 발급했을 수 있으니 다시 체크
+        if (accessToken != null && LocalDateTime.now().isBefore(tokenExpireTime.minusHours(1))) {
+            return accessToken;
+        }
+
         String url = baseUrl + "/oauth2/tokenP";
 
         HttpHeaders headers = new HttpHeaders();
@@ -76,7 +82,6 @@ public class KisAuthService {
         Map<String, Object> response = restTemplate.postForObject(url, request, Map.class);
 
         accessToken = (String) response.get("access_token");
-        // 만료시간 24시간으로 설정
         tokenExpireTime = LocalDateTime.now().plusHours(24);
 
         return accessToken;
