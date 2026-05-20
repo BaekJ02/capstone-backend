@@ -117,6 +117,30 @@ public class KisWebSocketClient {
         }
     }
 
+    public void subscribePriceOnly(String symbol) {
+        subscribedSymbols.add(symbol);
+        if (connected) {
+            sendPriceOnlySubscribe(symbol, kisAuthService.getApprovalKey(), true);
+        }
+    }
+
+    public void unsubscribePriceOnly(String symbol) {
+        subscribedSymbols.remove(symbol);
+        if (connected) {
+            sendPriceOnlySubscribe(symbol, kisAuthService.getApprovalKey(), false);
+        }
+    }
+
+    private void sendPriceOnlySubscribe(String symbol, String approvalKey, boolean subscribe) {
+        String trType = subscribe ? "1" : "2";
+        String priceMsg = String.format(
+            "{\"header\":{\"approval_key\":\"%s\",\"custtype\":\"P\",\"tr_type\":\"%s\",\"content-type\":\"utf-8\"}," +
+            "\"body\":{\"input\":{\"tr_id\":\"H0STCNT0\",\"tr_key\":\"%s\"}}}",
+            approvalKey, trType, symbol
+        );
+        wsClient.send(priceMsg);
+    }
+
     private void sendSubscribe(String symbol, String approvalKey, boolean subscribe) {
         String trType = subscribe ? "1" : "2";
         String priceMsg = String.format(
