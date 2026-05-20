@@ -63,6 +63,14 @@
   - 인증 불필요 (SecurityConfig permitAll 처리)
 - 국내주식 거래대금 순위 정확도 수정 (FID_BLNG_CLS_CODE 0→3, volume 필드 acml_vol→acml_tr_pbmn으로 변경, 실제 거래금액 기준 정렬)
 - DB 스키마 정리 완료 (MySQL Workbench DDL 스크립트 추출 — users, holding, orders, watchlist 4개 테이블, 팀원 공유)
+- KisAuthService Race Condition 수정 (getAccessToken/issueAccessToken/getApprovalKey/issueApprovalKey 모두 synchronized, Double-checked locking 패턴으로 토큰 중복 발급 방지)
+- subscribeDomesticOnly / subscribeOverseasOnly 다중 구독 버그 수정 (clear() 제거 — 호출 시 기존 구독 전부 삭제되던 문제)
+- 홈화면용 현재가 전용 구독 엔드포인트 추가
+  - `/app/subscribe/domestic/price` → H0STCNT0만 구독 (슬롯 1개)
+  - `/app/unsubscribe/domestic/price`
+  - KisWebSocketClient: subscribePriceOnly / unsubscribePriceOnly / sendPriceOnlySubscribe 추가
+  - StockSubscriptionService: subscribeDomesticPriceOnly / unsubscribeDomesticPriceOnly 추가 (중복 구독 방지 포함)
+  - StockSubscriptionController: @Slf4j 추가, 각 메서드 로그 추가, price 전용 엔드포인트 추가
 
 ---
 

@@ -801,11 +801,31 @@ client.activate();
 
 ### 국내 주식 구독
 
+용도에 따라 두 가지 엔드포인트를 구분해서 사용해요.
+
+#### 홈화면용 - 현재가만 (슬롯 1개, KIS 제한 절약)
+
+```javascript
+// 구독 시작
+client.publish({ destination: '/app/subscribe/domestic/price', body: '005930' });
+
+// 데이터 수신
+client.subscribe('/topic/domestic/005930', (message) => {
+    const data = JSON.parse(message.body);
+    // {symbol: "005930", price: "75000", change: "1400", changePercent: "1.90"}
+});
+
+// 구독 취소
+client.publish({ destination: '/app/unsubscribe/domestic/price', body: '005930' });
+```
+
+#### 종목 상세용 - 현재가 + 호가창 동시 구독 (슬롯 2개)
+
 ```javascript
 // 구독 시작
 client.publish({ destination: '/app/subscribe/domestic', body: '005930' });
 
-// 데이터 수신 (정규장 중 실시간, 장외 시간에는 3초마다 업데이트)
+// 현재가 수신
 client.subscribe('/topic/domestic/005930', (message) => {
     const data = JSON.parse(message.body);
     // {symbol: "005930", price: "75000", change: "1400", changePercent: "1.90"}
@@ -814,6 +834,8 @@ client.subscribe('/topic/domestic/005930', (message) => {
 // 구독 취소
 client.publish({ destination: '/app/unsubscribe/domestic', body: '005930' });
 ```
+
+> KIS WebSocket은 동시 구독 슬롯이 41개로 제한되어 있어요. 홈화면처럼 여러 종목을 한꺼번에 구독할 때는 `/price` 엔드포인트를 사용해 슬롯을 절약하세요.
 
 ---
 

@@ -70,7 +70,17 @@ JWT (Bearer 토큰) 방식. 세션 방식은 제거됨.
 
 ### WebSocket / Real-time Data
 
-STOMP over SockJS. Clients send to `/app/subscribe/domestic` or `/app/subscribe/overseas`; the server publishes price updates to `/topic/domestic/{symbol}` or `/topic/overseas/{symbol}`. `StockSubscriptionService` manages active subscriptions; `StockWebSocketService` does the broadcasting.
+STOMP over SockJS. 클라이언트는 아래 엔드포인트로 구독 요청을 보내고, 서버는 `/topic/domestic/{symbol}` 또는 `/topic/overseas/{symbol}`로 가격 업데이트를 브로드캐스트한다.
+
+| 엔드포인트 | 용도 | KIS 슬롯 |
+|---|---|---|
+| `/app/subscribe/domestic/price` | 홈화면 현재가 전용 (H0STCNT0만) | 1개 |
+| `/app/subscribe/domestic` | 종목 상세 (H0STCNT0 + H0STASP0) | 2개 |
+| `/app/subscribe/overseas` | 미국주식 (HDFSCNT0) | 1개 |
+
+KIS WebSocket 동시 구독 제한: **41개 슬롯**. 홈화면은 `/price` 엔드포인트로 슬롯 절약.
+
+`StockSubscriptionService`가 활성 구독 목록을 관리하고 `KisWebSocketClient`를 직접 호출한다. `StockWebSocketService`는 브로드캐스트를 담당한다.
 
 ### Database
 
@@ -96,10 +106,20 @@ STOMP over SockJS. Clients send to `/app/subscribe/domestic` or `/app/subscribe/
   - 미국주식 정규장 → KIS 웹소켓 실시간 수신 (tr_id: HDFSCNT0, tr_key: D+거래소3자리+심볼, 예: DNASAAPL)
   - 미국주식 장외 → REST API 3초 폴링
   - 새 파일: `MarketTimeService.java` (시간대 판별), `KisWebSocketClient.java` (KIS WS 연결/구독/파싱)
+  - `KisWebSocketClient` 구독 메서드:
+    - `subscribe(symbol)`: H0STCNT0 + H0STASP0 동시 구독 (종목 상세용, 슬롯 2개)
+    - `subscribePriceOnly(symbol)`: H0STCNT0만 구독 (홈화면용, 슬롯 1개)
+    - `unsubscribe / unsubscribePriceOnly`: 각각 대응하는 구독 취소
+- `StockSubscriptionService`: `KisWebSocketClient` 의존성 주입. `subscribeDomesticPriceOnly(symbol)` — 중복 구독 방지(Set.add 반환값 체크) 후 `kisWebSocketClient.subscribePriceOnly()` 호출
+- `StockSubscriptionController` 엔드포인트:
+  - `/subscribe/domestic` / `/unsubscribe/domestic`: 종목 상세용 (H0STCNT0 + H0STASP0)
+  - `/subscribe/domestic/price` / `/unsubscribe/domestic/price`: 홈화면용 (H0STCNT0만)
+  - `/subscribe/overseas` / `/unsubscribe/overseas`: 미국주식
+  - `@Slf4j` 적용, 각 메서드 첫 줄에 `log.info` 추가
 - 호가창: `OrderBookDto`, `GET /api/stocks/orderbook/domestic/{symbol}` (tr_id: FHKST01010200)
   - 실시간 호가 웹소켓: H0STASP0 → `/topic/orderbook/{symbol}`
   - 실시간 체결 웹소켓: H0STCNT0 → `/topic/tradetick/{symbol}` (TradeTickDto)
-  - 국내주식 구독 시 H0STCNT0 + H0STASP0 동시 구독
+  - 종목 상세 구독(`/subscribe/domestic`) 시 H0STCNT0 + H0STASP0 동시 구독
   - 체결 필드: 1건 = 46개 필드, `fields[offset+21]` 매수매도구분 (1=매수, 5=매도), offset = (fields.length/46 - 1) * 46
   - 호가 필드: 1건 = 62개 필드, offset = (fields.length/62 - 1) * 62
 - 매매 수량 유효성 검사: 프론트(trade 함수) + 백엔드(TradeService.buy/sell) 모두 quantity < 1 차단
@@ -136,9 +156,14 @@ STOMP over SockJS. Clients send to `/app/subscribe/domestic` or `/app/subscribe/
   - 미국: FMP `/stable/biggest-gainers`, `/stable/biggest-losers`, `/stable/most-actives`
   - 백엔드 정렬: RISE=changePercent 내림차순, FALL=오름차순, VOLUME=acml_tr_pbmn 내림차순
   - UriComponentsBuilder.fromUriString()으로 파라미터 빌드 (빈 값 인코딩 문제 방지)
+- `KisAuthService` Race Condition 수정: `getAccessToken`, `issueAccessToken`, `getApprovalKey`, `issueApprovalKey` 모두 `synchronized` 적용. Double-checked locking 패턴으로 토큰 중복 발급 방지
 
 ## 알려진 이슈
 
+- KIS WebSocket 동시 구독 슬롯 제한 (41개):
+  - 국내주식 종목 상세: H0STCNT0 + H0STASP0 = 종목당 2슬롯 소모
+  - 홈화면: `/subscribe/domestic/price`로 H0STCNT0만 구독 → 종목당 1슬롯
+  - 종목 상세 창은 추후 별도 엔드포인트로 분리 예정
 - 국내주식 호가창 잔량 1/2 문제:
   - REST API(FHKST01010200), 웹소켓(H0STASP0) 모두 실제값의 약 1/2 반환
   - KIS 오픈API 한계로 추정, 코드 자체는 정상
