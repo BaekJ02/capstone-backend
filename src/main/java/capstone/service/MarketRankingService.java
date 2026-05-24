@@ -131,16 +131,12 @@ public class MarketRankingService {
     }
 
     public List<RankingItemDto> getOverseasRanking(String type) {
-        try {
-            String endpoint;
-            if ("FALL".equals(type)) {
-                endpoint = "/biggest-losers";
-            } else if ("VOLUME".equals(type)) {
-                endpoint = "/most-actives";
-            } else {
-                endpoint = "/biggest-gainers";
-            }
+        if ("VOLUME".equals(type)) {
+            return getOverseasVolumeRankingFromKis();
+        }
 
+        try {
+            String endpoint = "FALL".equals(type) ? "/biggest-losers" : "/biggest-gainers";
             String url = fmpBaseUrl + endpoint + "?apikey=" + fmpApiKey;
             List<Map<String, Object>> list = restTemplate.getForObject(url, List.class);
             if (list == null) return new ArrayList<>();
@@ -163,6 +159,62 @@ public class MarketRankingService {
             log.error("미국 순위 조회 실패 [type={}]: {}", type, e.getMessage());
             return new ArrayList<>();
         }
+    }
+
+    private List<RankingItemDto> getOverseasVolumeRankingFromKis() {
+        String baseUrl = kisBaseUrl + "/uapi/overseas-stock/v1/ranking/trade-pbmn";
+        String[] exchanges = {"NAS", "NYS", "AMS"};
+
+        List<RankingItemDto> combined = new ArrayList<>();
+        for (String excd : exchanges) {
+            try {
+                UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUrl)
+                        .queryParam("KEYB", "")
+                        .queryParam("AUTH", "")
+                        .queryParam("EXCD", excd)
+                        .queryParam("NDAY", "0")
+                        .queryParam("VOL_RANG", "0")
+                        .queryParam("PRC1", "")
+                        .queryParam("PRC2", "");
+                String finalUrl = builder.toUriString();
+
+                HttpHeaders headers = new HttpHeaders();
+                headers.set("authorization", "Bearer " + kisAuthService.getAccessToken());
+                headers.set("appkey", appKey);
+                headers.set("appsecret", appSecret);
+                headers.set("tr_id", "HHDFS76320010");
+                headers.set("custtype", "P");
+
+                HttpEntity<Void> request = new HttpEntity<>(headers);
+                Map<String, Object> response = restTemplate.exchange(finalUrl, HttpMethod.GET, request, Map.class).getBody();
+                if (response == null) continue;
+
+                List<Map<String, Object>> output2 = (List<Map<String, Object>>) response.get("output2");
+                if (output2 == null) continue;
+
+                for (Map<String, Object> item : output2) {
+                    combined.add(RankingItemDto.builder()
+                            .symbol(str(item, "symb"))
+                            .name(str(item, "name"))
+                            .price(str(item, "last"))
+                            .change(str(item, "diff"))
+                            .changePercent(str(item, "rate"))
+                            .volume(str(item, "tamt"))
+                            .build());
+                }
+            } catch (Exception e) {
+                log.error("미국 거래대금 순위 조회 실패 [excd={}]: {}", excd, e.getMessage());
+            }
+        }
+
+        if (combined.isEmpty()) return combined;
+
+        combined.sort((a, b) -> {
+            try {
+                return Double.compare(Double.parseDouble(b.getVolume()), Double.parseDouble(a.getVolume()));
+            } catch (Exception e) { return 0; }
+        });
+        return combined.subList(0, Math.min(20, combined.size()));
     }
 
     private String str(Map<String, Object> map, String key) {
