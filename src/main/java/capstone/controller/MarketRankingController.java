@@ -1,8 +1,10 @@
 package capstone.controller;
 
+import capstone.dto.IndexDto;
 import capstone.dto.RankingItemDto;
 import capstone.service.MarketRankingService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,5 +26,10 @@ public class MarketRankingController {
     public List<RankingItemDto> getOverseasRanking(
             @RequestParam(defaultValue = "RISE") String type) {
         return marketRankingService.getOverseasRanking(type);
+    }
+
+    @GetMapping("/indices")
+    public ResponseEntity<List<IndexDto>> getMarketIndices() {
+        return ResponseEntity.ok(marketRankingService.getMarketIndices());
     }
 }

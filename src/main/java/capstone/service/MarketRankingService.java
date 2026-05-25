@@ -1,5 +1,6 @@
 package capstone.service;
 
+import capstone.dto.IndexDto;
 import capstone.dto.RankingItemDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -215,6 +216,81 @@ public class MarketRankingService {
             } catch (Exception e) { return 0; }
         });
         return combined.subList(0, Math.min(20, combined.size()));
+    }
+
+    public List<IndexDto> getMarketIndices() {
+        List<IndexDto> result = new ArrayList<>();
+        result.add(getDomesticIndex("0001", "KOSPI", "코스피"));
+        result.add(getDomesticIndex("1001", "KOSDAQ", "코스닥"));
+        result.add(getOverseasIndex("SPX", "SP500", "S&P 500"));
+        result.add(getOverseasIndex("COMP", "NASDAQ", "나스닥"));
+        return result;
+    }
+
+    private IndexDto getDomesticIndex(String iscd, String code, String name) {
+        try {
+            String url = UriComponentsBuilder
+                    .fromUriString(kisBaseUrl + "/uapi/domestic-stock/v1/quotations/inquire-index-price")
+                    .queryParam("FID_COND_MRKT_DIV_CODE", "U")
+                    .queryParam("FID_INPUT_ISCD", iscd)
+                    .toUriString();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("authorization", "Bearer " + kisAuthService.getAccessToken());
+            headers.set("appkey", appKey);
+            headers.set("appsecret", appSecret);
+            headers.set("tr_id", "FHPUP02100000");
+            headers.set("custtype", "P");
+
+            HttpEntity<Void> request = new HttpEntity<>(headers);
+            Map<String, Object> response = restTemplate.exchange(url, HttpMethod.GET, request, Map.class).getBody();
+            Map<String, Object> output = (Map<String, Object>) response.get("output");
+
+            return IndexDto.builder()
+                    .code(code)
+                    .name(name)
+                    .price(str(output, "bstp_nmix_prpr"))
+                    .change(str(output, "bstp_nmix_prdy_vrss"))
+                    .changePercent(str(output, "bstp_nmix_prdy_ctrt"))
+                    .build();
+        } catch (Exception e) {
+            log.error("국내 지수 조회 실패 [{}]: {}", code, e.getMessage());
+            return IndexDto.builder().code(code).name(name).price("").change("").changePercent("").build();
+        }
+    }
+
+    private IndexDto getOverseasIndex(String iscd, String code, String name) {
+        try {
+            String url = UriComponentsBuilder
+                    .fromUriString(kisBaseUrl + "/uapi/overseas-price/v1/quotations/inquire-time-indexchartprice")
+                    .queryParam("FID_COND_MRKT_DIV_CODE", "N")
+                    .queryParam("FID_INPUT_ISCD", iscd)
+                    .queryParam("FID_HOUR_CLS_CODE", "0")
+                    .queryParam("FID_PW_DATA_INCU_YN", "N")
+                    .toUriString();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("authorization", "Bearer " + kisAuthService.getAccessToken());
+            headers.set("appkey", appKey);
+            headers.set("appsecret", appSecret);
+            headers.set("tr_id", "FHKST03030200");
+            headers.set("custtype", "P");
+
+            HttpEntity<Void> request = new HttpEntity<>(headers);
+            Map<String, Object> response = restTemplate.exchange(url, HttpMethod.GET, request, Map.class).getBody();
+            Map<String, Object> output1 = (Map<String, Object>) response.get("output1");
+
+            return IndexDto.builder()
+                    .code(code)
+                    .name(name)
+                    .price(str(output1, "ovrs_nmix_prpr"))
+                    .change(str(output1, "ovrs_nmix_prdy_vrss"))
+                    .changePercent(str(output1, "prdy_ctrt"))
+                    .build();
+        } catch (Exception e) {
+            log.error("해외 지수 조회 실패 [{}]: {}", code, e.getMessage());
+            return IndexDto.builder().code(code).name(name).price("").change("").changePercent("").build();
+        }
     }
 
     private String str(Map<String, Object> map, String key) {
