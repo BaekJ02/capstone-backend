@@ -34,6 +34,7 @@ public class KisWebSocketClient {
     private WebSocketClient wsClient;
     private final Set<String> subscribedSymbols = ConcurrentHashMap.newKeySet();
     private final Set<String> subscribedOverseasSymbols = ConcurrentHashMap.newKeySet();
+    private final Set<String> subscribedOverseasOrderbookSymbols = ConcurrentHashMap.newKeySet();
     private boolean connected = false;
     private final AtomicInteger hdfscnt0LogCount = new AtomicInteger(0);
 
@@ -56,6 +57,9 @@ public class KisWebSocketClient {
                     }
                     for (String symbolWithExchange : subscribedOverseasSymbols) {
                         sendOverseasSubscribe(symbolWithExchange, approvalKey, true);
+                    }
+                    for (String symbolWithExchange : subscribedOverseasOrderbookSymbols) {
+                        sendOverseasOrderbookSubscribe(symbolWithExchange, approvalKey, true);
                     }
                 }
 
@@ -117,6 +121,20 @@ public class KisWebSocketClient {
         }
     }
 
+    public void subscribeOverseasOrderbook(String symbolWithExchange) {
+        subscribedOverseasOrderbookSymbols.add(symbolWithExchange);
+        if (connected) {
+            sendOverseasOrderbookSubscribe(symbolWithExchange, kisAuthService.getApprovalKey(), true);
+        }
+    }
+
+    public void unsubscribeOverseasOrderbook(String symbolWithExchange) {
+        subscribedOverseasOrderbookSymbols.remove(symbolWithExchange);
+        if (connected) {
+            sendOverseasOrderbookSubscribe(symbolWithExchange, kisAuthService.getApprovalKey(), false);
+        }
+    }
+
     public void subscribePriceOnly(String symbol) {
         subscribedSymbols.add(symbol);
         if (connected) {
@@ -157,6 +175,20 @@ public class KisWebSocketClient {
         wsClient.send(orderbookMsg);
     }
 
+    private void sendOverseasOrderbookSubscribe(String symbolWithExchange, String approvalKey, boolean subscribe) {
+        String trType = subscribe ? "1" : "2";
+        String[] parts = symbolWithExchange.split(",");
+        String symbol = parts[0];
+        String exchange = parts.length > 1 ? parts[1] : "NAS";
+        String trKey = "D" + exchange + symbol;
+        String message = String.format(
+            "{\"header\":{\"approval_key\":\"%s\",\"custtype\":\"P\",\"tr_type\":\"%s\",\"content-type\":\"utf-8\"}," +
+            "\"body\":{\"input\":{\"tr_id\":\"HDFSASP0\",\"tr_key\":\"%s\"}}}",
+            approvalKey, trType, trKey
+        );
+        wsClient.send(message);
+    }
+
     private void sendOverseasSubscribe(String symbolWithExchange, String approvalKey, boolean subscribe) {
         String trType = subscribe ? "1" : "2";
         String[] parts = symbolWithExchange.split(",");
@@ -187,6 +219,8 @@ public class KisWebSocketClient {
                 if (fields.length < 6) return;
                 handlePrice(fields);
                 handleTradeTick(fields);
+            } else if ("HDFSASP0".equals(trId)) {
+                handleOverseasOrderBook(fields);
             } else if ("HDFSCNT0".equals(trId)) {
                 if (fields.length < 15) return;
                 String symbol = fields[1];
@@ -201,6 +235,40 @@ public class KisWebSocketClient {
         } catch (Exception e) {
             log.error("메시지 파싱 오류: {}", e.getMessage());
         }
+    }
+
+    private void handleOverseasOrderBook(String[] fields) {
+        if (fields.length < 14) return;
+        String symbol = fields[0];
+
+        OrderBookDto dto = new OrderBookDto();
+        dto.setSymbol(symbol);
+
+        // 매도호가: PASK1~10, 높은가격→낮은가격 역순
+        List<OrderBookDto.OrderBookEntry> asks = new ArrayList<>();
+        for (int i = 10; i >= 1; i--) {
+            int base = 10 + (i - 1) * 6;
+            if (base + 3 >= fields.length) continue;
+            OrderBookDto.OrderBookEntry entry = new OrderBookDto.OrderBookEntry();
+            entry.setPrice(fields[base + 1]);    // PASKi
+            entry.setQuantity(fields[base + 3]); // VASKi
+            asks.add(entry);
+        }
+        dto.setAsks(asks);
+
+        // 매수호가: PBID1~10
+        List<OrderBookDto.OrderBookEntry> bids = new ArrayList<>();
+        for (int i = 1; i <= 10; i++) {
+            int base = 10 + (i - 1) * 6;
+            if (base + 2 >= fields.length) continue;
+            OrderBookDto.OrderBookEntry entry = new OrderBookDto.OrderBookEntry();
+            entry.setPrice(fields[base]);        // PBIDi
+            entry.setQuantity(fields[base + 2]); // VBIDi
+            bids.add(entry);
+        }
+        dto.setBids(bids);
+
+        messagingTemplate.convertAndSend("/topic/orderbook/" + symbol, dto);
     }
 
     private void handlePrice(String[] fields) {

@@ -49,4 +49,16 @@ public class StockSubscriptionController {
     public void unsubscribeDomesticPrice(@Payload String symbol) {
         subscriptionService.unsubscribeDomesticPriceOnly(symbol);
     }
+
+    // 미국주식 호가 구독
+    @MessageMapping("/subscribe/overseas/orderbook")
+    public void subscribeOverseasOrderbook(@Payload String symbol) {
+        subscriptionService.subscribeOverseasOrderbook(symbol);
+    }
+
+    // 미국주식 호가 구독 취소
+    @MessageMapping("/unsubscribe/overseas/orderbook")
+    public void unsubscribeOverseasOrderbook(@Payload String symbol) {
+        subscriptionService.unsubscribeOverseasOrderbook(symbol);
+    }
 }

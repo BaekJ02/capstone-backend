@@ -59,4 +59,12 @@ public class StockSubscriptionService {
         domesticSymbols.remove(symbol);
         kisWebSocketClient.unsubscribePriceOnly(symbol);
     }
+
+    public void subscribeOverseasOrderbook(String symbolWithExchange) {
+        kisWebSocketClient.subscribeOverseasOrderbook(symbolWithExchange);
+    }
+
+    public void unsubscribeOverseasOrderbook(String symbolWithExchange) {
+        kisWebSocketClient.unsubscribeOverseasOrderbook(symbolWithExchange);
+    }
 }
