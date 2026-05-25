@@ -230,6 +230,21 @@ public class KisWebSocketClient {
                 dto.setChange(fields[13]);
                 dto.setChangePercent(fields[14]);
                 messagingTemplate.convertAndSend("/topic/overseas/" + symbol, dto);
+                if (fields.length > 23) {
+                    TradeTickDto tickDto = new TradeTickDto();
+                    tickDto.setSymbol(symbol);
+                    tickDto.setTime(fields[5]);
+                    tickDto.setPrice(fields[11]);
+                    tickDto.setQuantity(fields[19]);
+                    try {
+                        long asvl = Long.parseLong(fields[23].trim());
+                        long bivl = Long.parseLong(fields[22].trim());
+                        tickDto.setSide(asvl >= bivl ? "BUY" : "SELL");
+                    } catch (Exception e) {
+                        tickDto.setSide("BUY");
+                    }
+                    messagingTemplate.convertAndSend("/topic/tradetick/overseas/" + symbol, tickDto);
+                }
             }
 
         } catch (Exception e) {
