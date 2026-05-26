@@ -86,6 +86,17 @@
   - 코스피(0001), 코스닥(1001): KIS /uapi/domestic-stock/v1/quotations/inquire-index-price (FHPUP02100000)
   - S&P500(SPX), 나스닥(COMP): KIS /uapi/overseas-price/v1/quotations/inquire-time-indexchartprice (FHKST03030200)
   - IndexDto 신규 생성: code, name, price, change, changePercent
+- 국내/미국주식 시가총액 순위 API 추가 (MARKET_CAP 타입)
+  - 국내: KIS `/uapi/domestic-stock/v1/ranking/market-cap` (tr_id: FHPST01740000), stck_avls 기준 정렬
+  - 미국: KIS `/uapi/overseas-stock/v1/ranking/market-cap` (tr_id: HHDFS76350100, CURR_GB=0), NYS+NAS+AMS 통합, tomv 기준 정렬
+  - RankingItemDto에 marketCap 필드 추가
+- AI 시장 뉴스 API 구현 (GET /api/market/news, 인증 불필요)
+  - MarketNewsService, MarketNewsController, MarketNewsDto 신규 생성
+  - KIS 해외뉴스종합(제목) API (HHPSTH60100C1, NATION_CD=US) 최근 10건
+  - NAS 거래대금 상위 20개 종목과 함께 Claude Haiku로 분석
+  - 응답: updatedAt, headlines(3개), positive(sector+stocks), negative(sector+stocks), summary
+  - 스케줄: 매일 08:00/14:00/16:00/20:00/22:30/05:00 자동 갱신
+  - build.gradle에 jackson-databind 추가, AppConfig에 ObjectMapper 빈 추가
 
 ---
 
@@ -107,10 +118,10 @@
 
 ## 🔨 다음 할 것
 
-1. 프론트엔드 연동 테스트 (다음주 예정)
-2. AI 분석 출력 양식 고정 → 3D 큐빅 AI 모델 도입 후 진행 예정
-3. 데일리 퀴즈 / 주식 시장 날씨 → UI 개편 후 고민
-4. 호가창 잔량 1/2 문제 수정 (KIS API 한계로 해결 어려울 수 있음, 장중 테스트 필요)
+1. 프론트엔드 연동 (지수 4개, 시가총액 순위, AI 뉴스, 미국주식 호가창 UI)
+2. 장외 시간 REST 폴링 초당 거래건수 초과 에러 개선
+3. AI 분석 출력 양식 고정 → 3D 큐빅 AI 모델 도입 후 진행 예정
+4. 호가창 잔량 1/2 문제 수정 (KIS API 한계로 해결 어려울 수 있음)
 
 ---
 
