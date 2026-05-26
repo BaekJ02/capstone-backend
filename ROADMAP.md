@@ -94,8 +94,9 @@
   - MarketNewsService, MarketNewsController, MarketNewsDto 신규 생성
   - KIS 해외뉴스종합(제목) API (HHPSTH60100C1, NATION_CD=US) 최근 10건
   - NAS 거래대금 상위 20개 종목과 함께 Claude Haiku로 분석
-  - 응답: updatedAt, headlines(3개), positive(sector+stocks), negative(sector+stocks), summary
-  - 스케줄: 매일 08:00/14:00/16:00/20:00/22:30/05:00 자동 갱신
+  - 응답: updatedAt, headlines(3개), positive(sector+reason+stocks), negative(sector+reason+stocks), summary
+  - StockDto: symbol, name, changePercent / SectorDto: sector, reason, stocks
+  - 스케줄: 매일 08:00/14:00/16:00/20:00/22:30/05:00 자동 갱신 (@PostConstruct 제거, 스케줄만 운영)
   - build.gradle에 jackson-databind 추가, AppConfig에 ObjectMapper 빈 추가
 
 ---
@@ -118,10 +119,11 @@
 
 ## 🔨 다음 할 것
 
-1. 프론트엔드 연동 (지수 4개, 시가총액 순위, AI 뉴스, 미국주식 호가창 UI)
-2. 장외 시간 REST 폴링 초당 거래건수 초과 에러 개선
-3. AI 분석 출력 양식 고정 → 3D 큐빅 AI 모델 도입 후 진행 예정
-4. 호가창 잔량 1/2 문제 수정 (KIS API 한계로 해결 어려울 수 있음)
+1. 프론트엔드 - 시가총액 순위 탭 추가 (MARKET_CAP)
+2. 프론트엔드 - 미국주식 호가창 UI 구현
+3. 장외 시간 REST 폴링 초당 거래건수 초과 에러 개선
+4. AI 분석 출력 양식 고정 → 3D 큐빅 AI 모델 도입 후 진행 예정
+5. 호가창 잔량 1/2 문제 수정 (KIS API 한계로 해결 어려울 수 있음)
 
 ---
 
