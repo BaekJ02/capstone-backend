@@ -168,9 +168,9 @@ public class MarketNewsService {
                   "positive": {
                     "sector": "호재 섹터명",
                     "stocks": [
-                      {"symbol": "종목코드", "changePercent": "+X.X%"},
-                      {"symbol": "종목코드", "changePercent": "+X.X%"},
-                      {"symbol": "종목코드", "changePercent": "+X.X%"}
+                      {"symbol": "종목코드", "name": "종목명", "changePercent": "+X.X%"},
+                      {"symbol": "종목코드", "name": "종목명", "changePercent": "+X.X%"},
+                      {"symbol": "종목코드", "name": "종목명", "changePercent": "+X.X%"}
                     ]
                   },
                   "negative": {
@@ -238,6 +238,7 @@ public class MarketNewsService {
             for (Map<String, Object> s : stockList) {
                 stocks.add(MarketNewsDto.StockDto.builder()
                         .symbol((String) s.get("symbol"))
+                        .name((String) s.get("name"))
                         .changePercent((String) s.get("changePercent"))
                         .build());
             }

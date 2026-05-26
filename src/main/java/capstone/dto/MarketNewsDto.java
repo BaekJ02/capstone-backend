@@ -32,6 +32,7 @@ public class MarketNewsDto {
     @AllArgsConstructor
     public static class StockDto {
         private String symbol;
+        private String name;
         private String changePercent;
     }
 }
