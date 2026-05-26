@@ -2,6 +2,7 @@ package capstone.service;
 
 import capstone.dto.MarketNewsDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,6 +38,11 @@ public class MarketNewsService {
     private String claudeApiKey;
 
     private MarketNewsDto cachedNews = null;
+
+    @PostConstruct
+    public void init() {
+        refreshNews();
+    }
 
     @Scheduled(cron = "0 0 8,14,16,20 * * *")
     public void refreshNews() {
