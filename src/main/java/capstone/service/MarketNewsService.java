@@ -44,7 +44,7 @@ public class MarketNewsService {
         refreshNews();
     }
 
-    @Scheduled(fixedDelay = 6 * 60 * 60 * 1000)
+    @Scheduled(cron = "0 0 8,14,16,20 * * *")
     public void refreshNews() {
         try {
             log.info("시장 뉴스 갱신 시작");
@@ -55,6 +55,16 @@ public class MarketNewsService {
         } catch (Exception e) {
             log.error("시장 뉴스 갱신 실패: {}", e.getMessage());
         }
+    }
+
+    @Scheduled(cron = "0 30 22 * * *")
+    public void refreshNewsNightOpen() {
+        refreshNews();
+    }
+
+    @Scheduled(cron = "0 0 5 * * *")
+    public void refreshNewsNightClose() {
+        refreshNews();
     }
 
     public MarketNewsDto getNews() {
