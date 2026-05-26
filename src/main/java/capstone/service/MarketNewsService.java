@@ -167,6 +167,7 @@ public class MarketNewsService {
                   "headlines": ["뉴스 핵심 요약 1", "뉴스 핵심 요약 2", "뉴스 핵심 요약 3"],
                   "positive": {
                     "sector": "호재 섹터명",
+                    "reason": "상승 이유 한두 문장",
                     "stocks": [
                       {"symbol": "종목코드", "name": "종목명", "changePercent": "+X.X%"},
                       {"symbol": "종목코드", "name": "종목명", "changePercent": "+X.X%"},
@@ -175,6 +176,7 @@ public class MarketNewsService {
                   },
                   "negative": {
                     "sector": "악재 섹터명",
+                    "reason": "하락 이유 한두 문장",
                     "stocks": [
                       {"symbol": "종목코드", "changePercent": "-X.X%"},
                       {"symbol": "종목코드", "changePercent": "-X.X%"},
@@ -232,6 +234,7 @@ public class MarketNewsService {
     private MarketNewsDto.SectorDto parseSector(Map<String, Object> map) {
         if (map == null) return null;
         String sector = (String) map.get("sector");
+        String reason = (String) map.get("reason");
         List<Map<String, Object>> stockList = (List<Map<String, Object>>) map.get("stocks");
         List<MarketNewsDto.StockDto> stocks = new ArrayList<>();
         if (stockList != null) {
@@ -243,6 +246,6 @@ public class MarketNewsService {
                         .build());
             }
         }
-        return MarketNewsDto.SectorDto.builder().sector(sector).stocks(stocks).build();
+        return MarketNewsDto.SectorDto.builder().sector(sector).reason(reason).stocks(stocks).build();
     }
 }

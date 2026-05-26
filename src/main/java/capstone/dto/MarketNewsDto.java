@@ -23,6 +23,7 @@ public class MarketNewsDto {
     @AllArgsConstructor
     public static class SectorDto {
         private String sector;
+        private String reason;
         private List<StockDto> stocks;
     }
 
