@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import jakarta.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -38,11 +37,6 @@ public class MarketNewsService {
     private String claudeApiKey;
 
     private MarketNewsDto cachedNews = null;
-
-    @PostConstruct
-    public void init() {
-        refreshNews();
-    }
 
     @Scheduled(cron = "0 0 8,14,16,20 * * *")
     public void refreshNews() {
