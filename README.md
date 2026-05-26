@@ -750,11 +750,11 @@ GET {ngrok주소}/api/market/domestic/ranking?type={타입}
 GET {ngrok주소}/api/market/overseas/ranking?type={타입}
 ```
 
-| type | 의미 | FMP 엔드포인트 |
-|------|------|----------------|
-| RISE | 급상승 | /stable/biggest-gainers |
-| FALL | 급하락 | /stable/biggest-losers |
-| VOLUME | 거래량 | /stable/most-actives |
+| type | 의미 | 데이터 소스 |
+|------|------|-------------|
+| RISE | 급상승 | FMP /stable/biggest-gainers |
+| FALL | 급하락 | FMP /stable/biggest-losers |
+| VOLUME | 거래대금 | KIS /uapi/overseas-stock/v1/ranking/trade-pbmn (NYS+NAS+AMS 통합, tamt 기준 정렬) |
 
 ---
 
@@ -776,6 +776,28 @@ GET {ngrok주소}/api/market/overseas/ranking?type={타입}
 - 최대 20개 결과 반환
 - 백엔드에서 type별 정렬 처리 (RISE: 등락률 내림차순, FALL: 오름차순, VOLUME: 누적 거래대금 내림차순)
 - 국내 VOLUME의 `volume` 필드는 누적 거래대금(원) 값임
+
+---
+
+### 📉 시장 지수 API
+
+> ✅ 로그인 없이 누구나 사용 가능해요.
+
+#### 시장 지수 조회
+
+```
+GET {ngrok주소}/api/market/indices
+```
+
+**응답**
+```json
+[
+    {"code": "0001", "name": "코스피",  "price": "2650.50", "change": "12.30",  "changePercent": "0.47"},
+    {"code": "1001", "name": "코스닥",  "price": "850.20",  "change": "-3.10",  "changePercent": "-0.36"},
+    {"code": "SPX",  "name": "S&P500",  "price": "5500.00", "change": "20.00",  "changePercent": "0.36"},
+    {"code": "COMP", "name": "나스닥",  "price": "17800.00","change": "50.00",  "changePercent": "0.28"}
+]
+```
 
 ---
 
@@ -853,6 +875,40 @@ client.subscribe('/topic/overseas/AAPL', (message) => {
 
 // 구독 취소
 client.publish({ destination: '/app/unsubscribe/overseas', body: 'AAPL,NAS' });
+```
+
+---
+
+### 미국 주식 호가창 구독
+
+```javascript
+// 구독 시작 (종목코드,거래소코드 형식)
+client.publish({ destination: '/app/subscribe/overseas/orderbook', body: 'AAPL,NAS' });
+
+// 호가 수신 (정규장 중 실시간)
+client.subscribe('/topic/orderbook/AAPL', (message) => {
+    const data = JSON.parse(message.body);
+    // {symbol: "AAPL", asks: [{price, quantity}, ...], bids: [{price, quantity}, ...], totalAskQty, totalBidQty}
+    // asks: 매도호가 10단계, bids: 매수호가 10단계
+});
+
+// 구독 취소
+client.publish({ destination: '/app/unsubscribe/overseas/orderbook', body: 'AAPL,NAS' });
+```
+
+> 미국 정규장(한국 기준 23:30~06:00) 테스트 중이에요. 장외 시간에는 데이터가 수신되지 않아요.
+
+---
+
+### 미국 주식 실시간 체결 구독
+
+미국 주식 구독(`/app/subscribe/overseas`) 시 체결 데이터도 함께 수신할 수 있어요.
+
+```javascript
+client.subscribe('/topic/tradetick/overseas/AAPL', (message) => {
+    const data = JSON.parse(message.body);
+    // {symbol: "AAPL", price: "254.23", volume: "100", tradeType: "BUY" 또는 "SELL"}
+});
 ```
 
 ---
@@ -982,7 +1038,7 @@ candleSeries.setData(chartData.data.map(item => ({
 7. **미국 주식 거래 시간**: 한국 시간 기준 밤 11시 30분 ~ 새벽 6시
 8. **분봉 데이터는 장중에만 의미있는 데이터예요.**
 9. **초기 가상 잔고는 1,000만원**이에요.
-10. **미국주식 호가창 및 실시간 체결 데이터**는 KIS 오픈API 미제공으로 구현되어 있지 않아요.
+10. **미국주식 호가창/체결 WebSocket**은 구현 완료 (HDFSASP0/HDFSCNT0)이에요. 미국 정규장 시간에만 실시간 데이터가 수신돼요. 장외 시간에는 데이터가 없어요.
 11. **정규장 외 시간대 실시간 주가**는 KIS API 한계로 REST API 3초 폴링 방식으로 제공돼요 (진짜 실시간 아님).
 
 ---

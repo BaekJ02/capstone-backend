@@ -71,6 +71,21 @@
   - KisWebSocketClient: subscribePriceOnly / unsubscribePriceOnly / sendPriceOnlySubscribe 추가
   - StockSubscriptionService: subscribeDomesticPriceOnly / unsubscribeDomesticPriceOnly 추가 (중복 구독 방지 포함)
   - StockSubscriptionController: @Slf4j 추가, 각 메서드 로그 추가, price 전용 엔드포인트 추가
+- 미국주식 실시간 호가 WebSocket 구현 (HDFSASP0, 매수/매도 각 10호가)
+  - KisWebSocketClient: subscribeOverseasOrderbook / unsubscribeOverseasOrderbook 추가
+  - StockSubscriptionService: subscribeOverseasOrderbook / unsubscribeOverseasOrderbook 추가
+  - StockSubscriptionController: /subscribe/overseas/orderbook, /unsubscribe/overseas/orderbook 추가
+  - 응답 토픽: /topic/orderbook/{symbol} (국내와 동일 구조)
+- 미국주식 실시간 체결 데이터 파싱 개선 (HDFSCNT0)
+  - TradeTickDto 파싱 추가, 응답 토픽: /topic/tradetick/overseas/{symbol}
+  - ASVL(매수체결량) vs BIVL(매도체결량) 비교로 매수/매도 구분
+- 미국주식 거래대금 순위 KIS API 교체 (FMP most-actives → KIS trade-pbmn)
+  - tr_id: HHDFS76320010, NYS+NAS+AMS 3개 거래소 통합, tamt 기준 정렬, 상위 20개
+  - RISE/FALL은 기존 FMP biggest-gainers / biggest-losers 유지
+- 시장 지수 API 구현 (GET /api/market/indices, 인증 불필요)
+  - 코스피(0001), 코스닥(1001): KIS /uapi/domestic-stock/v1/quotations/inquire-index-price (FHPUP02100000)
+  - S&P500(SPX), 나스닥(COMP): KIS /uapi/overseas-price/v1/quotations/inquire-time-indexchartprice (FHKST03030200)
+  - IndexDto 신규 생성: code, name, price, change, changePercent
 
 ---
 
@@ -84,7 +99,8 @@
 - 정규장 마감 직전(15:27~15:30) KIS API 불안정 구간 존재
   - 해당 시간대에 웹소켓 데이터가 일시적으로 끊기거나 NaN 표시될 수 있음
   - 코드 버그가 아닌 KIS API 자체 특성 (동시호가 전환 구간)
-- 미국주식 호가창 및 실시간 체결 데이터: KIS 오픈API 미제공으로 구현 불가
+- 미국주식 호가창(HDFSASP0)/체결(HDFSCNT0) 웹소켓 구현 완료, 미국 정규장 테스트 필요
+- 장외 시간 REST 폴링 초당 거래건수 초과 에러 (미수정)
 - 정규장 외 시간대 실시간 주가: KIS API 한계로 구현 불가 (3초 폴링 방식으로 대체 제공)
 
 ---
