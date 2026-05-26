@@ -741,6 +741,7 @@ GET {ngrok주소}/api/market/domestic/ranking?type={타입}
 | RISE | 급상승 (등락률 내림차순) |
 | FALL | 급하락 (등락률 오름차순) |
 | VOLUME | 거래대금 (누적 거래대금 acml_tr_pbmn 기준 내림차순) |
+| MARKET_CAP | 시가총액 (stck_avls 기준 내림차순) |
 
 ---
 
@@ -755,6 +756,7 @@ GET {ngrok주소}/api/market/overseas/ranking?type={타입}
 | RISE | 급상승 | FMP /stable/biggest-gainers |
 | FALL | 급하락 | FMP /stable/biggest-losers |
 | VOLUME | 거래대금 | KIS /uapi/overseas-stock/v1/ranking/trade-pbmn (NYS+NAS+AMS 통합, tamt 기준 정렬) |
+| MARKET_CAP | 시가총액 | KIS /uapi/overseas-stock/v1/ranking/market-cap (NYS+NAS+AMS 통합, tomv 기준 정렬) |
 
 ---
 
@@ -768,7 +770,8 @@ GET {ngrok주소}/api/market/overseas/ranking?type={타입}
         "price": "75000",
         "change": "1400",
         "changePercent": "1.90",
-        "volume": "12345678"
+        "volume": "12345678",
+        "marketCap": "17509604"
     }
 ]
 ```
@@ -798,6 +801,54 @@ GET {ngrok주소}/api/market/indices
     {"code": "COMP", "name": "나스닥",  "price": "17800.00","change": "50.00",  "changePercent": "0.28"}
 ]
 ```
+
+---
+
+### 📰 AI 시장 뉴스 API
+
+> ✅ 로그인 없이 누구나 사용 가능해요.
+
+#### AI 시장 뉴스 조회
+
+```
+GET {ngrok주소}/api/market/news
+```
+
+**응답**
+```json
+{
+    "updatedAt": "2026-05-26 13:11",
+    "headlines": [
+        "뉴스 핵심 요약 1",
+        "뉴스 핵심 요약 2",
+        "뉴스 핵심 요약 3"
+    ],
+    "positive": {
+        "sector": "호재 섹터명",
+        "reason": "상승 이유 한두 문장",
+        "stocks": [
+            {"symbol": "NVDA", "name": "엔비디아", "changePercent": "+3.2%"},
+            {"symbol": "AMD", "name": "AMD", "changePercent": "+2.8%"},
+            {"symbol": "RKLB", "name": "로켓 랩", "changePercent": "+8.2%"}
+        ]
+    },
+    "negative": {
+        "sector": "악재 섹터명",
+        "reason": "하락 이유 한두 문장",
+        "stocks": [
+            {"symbol": "MU", "name": "마이크론 테크놀로지", "changePercent": "-1.5%"},
+            {"symbol": "SNDK", "name": "샌디스크", "changePercent": "-4.1%"},
+            {"symbol": "FUTU", "name": "푸투 홀딩스", "changePercent": "-27.5%"}
+        ]
+    },
+    "summary": "시장 전반적인 분위기 한 문장 요약"
+}
+```
+
+- KIS 해외뉴스 API(미국) 제목 10건 + NAS 거래대금 상위 20개 종목을 Claude AI가 분석
+- 매일 08:00 / 14:00 / 16:00 / 20:00 / 22:30 / 05:00 자동 갱신 (캐싱)
+- 캐시가 없는 경우 204 No Content 반환
+- positive/negative 각각 sector, reason, stocks(symbol+name+changePercent) 포함
 
 ---
 
