@@ -252,7 +252,8 @@ public class MarketRankingService {
                         .queryParam("KEYB", "")
                         .queryParam("AUTH", "")
                         .queryParam("EXCD", excd)
-                        .queryParam("VOL_RANG", "0");
+                        .queryParam("VOL_RANG", "0")
+                        .queryParam("CURR_GB", "0");
                 String finalUrl = builder.toUriString();
 
                 HttpHeaders headers = new HttpHeaders();
