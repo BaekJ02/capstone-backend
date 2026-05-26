@@ -16,4 +16,5 @@ public class RankingItemDto {
     private String change;
     private String changePercent;
     private String volume;
+    private String marketCap;
 }

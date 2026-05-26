@@ -60,6 +60,19 @@ public class MarketRankingService {
                 params.put("FID_INPUT_PRICE_1", "");
                 params.put("FID_INPUT_PRICE_2", "");
                 params.put("FID_VOL_CNT", "");
+            } else if ("MARKET_CAP".equals(type)) {
+                baseUrl = kisBaseUrl + "/uapi/domestic-stock/v1/ranking/market-cap";
+                trId = "FHPST01740000";
+                symbolField = "mksc_shrn_iscd";
+                params.put("fid_cond_mrkt_div_code", "J");
+                params.put("fid_cond_scr_div_code", "20174");
+                params.put("fid_div_cls_code", "0");
+                params.put("fid_input_iscd", "0000");
+                params.put("fid_trgt_cls_code", "0");
+                params.put("fid_trgt_exls_cls_code", "0");
+                params.put("fid_input_price_1", "");
+                params.put("fid_input_price_2", "");
+                params.put("fid_vol_cnt", "");
             } else {
                 baseUrl = kisBaseUrl + "/uapi/domestic-stock/v1/ranking/fluctuation";
                 trId = "FHPST01700000";
@@ -107,12 +120,19 @@ public class MarketRankingService {
                         .change(str(item, "prdy_vrss"))
                         .changePercent(str(item, "prdy_ctrt"))
                         .volume(str(item, "VOLUME".equals(type) ? "acml_tr_pbmn" : "acml_vol"))
+                        .marketCap("MARKET_CAP".equals(type) ? str(item, "stck_avls") : "")
                         .build());
             }
             if ("VOLUME".equals(type)) {
                 result.sort((a, b) -> {
                     try {
                         return Long.compare(Long.parseLong(b.getVolume()), Long.parseLong(a.getVolume()));
+                    } catch (Exception e) { return 0; }
+                });
+            } else if ("MARKET_CAP".equals(type)) {
+                result.sort((a, b) -> {
+                    try {
+                        return Long.compare(Long.parseLong(b.getMarketCap()), Long.parseLong(a.getMarketCap()));
                     } catch (Exception e) { return 0; }
                 });
             } else {
@@ -134,6 +154,9 @@ public class MarketRankingService {
     public List<RankingItemDto> getOverseasRanking(String type) {
         if ("VOLUME".equals(type)) {
             return getOverseasVolumeRankingFromKis();
+        }
+        if ("MARKET_CAP".equals(type)) {
+            return getOverseasMarketCapRankingFromKis();
         }
 
         try {
@@ -213,6 +236,60 @@ public class MarketRankingService {
         combined.sort((a, b) -> {
             try {
                 return Double.compare(Double.parseDouble(b.getVolume()), Double.parseDouble(a.getVolume()));
+            } catch (Exception e) { return 0; }
+        });
+        return combined.subList(0, Math.min(20, combined.size()));
+    }
+
+    private List<RankingItemDto> getOverseasMarketCapRankingFromKis() {
+        String baseUrl = kisBaseUrl + "/uapi/overseas-stock/v1/ranking/market-cap";
+        String[] exchanges = {"NAS", "NYS", "AMS"};
+
+        List<RankingItemDto> combined = new ArrayList<>();
+        for (String excd : exchanges) {
+            try {
+                UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUrl)
+                        .queryParam("KEYB", "")
+                        .queryParam("AUTH", "")
+                        .queryParam("EXCD", excd)
+                        .queryParam("VOL_RANG", "0");
+                String finalUrl = builder.toUriString();
+
+                HttpHeaders headers = new HttpHeaders();
+                headers.set("authorization", "Bearer " + kisAuthService.getAccessToken());
+                headers.set("appkey", appKey);
+                headers.set("appsecret", appSecret);
+                headers.set("tr_id", "HHDFS76350100");
+                headers.set("custtype", "P");
+
+                HttpEntity<Void> request = new HttpEntity<>(headers);
+                Map<String, Object> response = restTemplate.exchange(finalUrl, HttpMethod.GET, request, Map.class).getBody();
+                if (response == null) continue;
+
+                List<Map<String, Object>> output2 = (List<Map<String, Object>>) response.get("output2");
+                if (output2 == null) continue;
+
+                for (Map<String, Object> item : output2) {
+                    combined.add(RankingItemDto.builder()
+                            .symbol(str(item, "symb"))
+                            .name(str(item, "name"))
+                            .price(str(item, "last"))
+                            .change(str(item, "diff"))
+                            .changePercent(str(item, "rate"))
+                            .volume(str(item, "tvol"))
+                            .marketCap(str(item, "tomv"))
+                            .build());
+                }
+            } catch (Exception e) {
+                log.error("미국 시가총액 순위 조회 실패 [excd={}]: {}", excd, e.getMessage());
+            }
+        }
+
+        if (combined.isEmpty()) return combined;
+
+        combined.sort((a, b) -> {
+            try {
+                return Double.compare(Double.parseDouble(b.getMarketCap()), Double.parseDouble(a.getMarketCap()));
             } catch (Exception e) { return 0; }
         });
         return combined.subList(0, Math.min(20, combined.size()));
