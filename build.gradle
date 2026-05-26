@@ -40,6 +40,7 @@ dependencies {
 	implementation 'com.opencsv:opencsv:5.9'
 	implementation 'org.java-websocket:Java-WebSocket:1.5.4'
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+	implementation 'com.fasterxml.jackson.core:jackson-databind'
 }
 
 tasks.named('test') {
