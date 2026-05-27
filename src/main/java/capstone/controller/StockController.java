@@ -9,8 +9,10 @@ import capstone.service.StockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import capstone.dto.ChartDataDto;
+import org.springframework.http.ResponseEntity;
 
 @RestController
 @RequiredArgsConstructor
@@ -106,6 +108,20 @@ public class StockController {
     @GetMapping("/orderbook/domestic/{symbol}")
     public OrderBookDto getDomesticOrderBook(@PathVariable String symbol) {
         return stockService.getDomesticOrderBook(symbol);
+    }
+
+    // 미국주식 호가 조회 (KIS REST API 미제공 — 빈 데이터 반환, WebSocket으로 실시간 수신)
+    @GetMapping("/orderbook/overseas/{symbol}")
+    public ResponseEntity<OrderBookDto> getOverseasOrderbook(
+            @PathVariable String symbol,
+            @RequestParam(defaultValue = "NAS") String exchange) {
+        OrderBookDto dto = new OrderBookDto();
+        dto.setSymbol(symbol);
+        dto.setAsks(new ArrayList<>());
+        dto.setBids(new ArrayList<>());
+        dto.setTotalAskQty("0");
+        dto.setTotalBidQty("0");
+        return ResponseEntity.ok(dto);
     }
 
 }
