@@ -254,7 +254,9 @@ public class KisWebSocketClient {
 
     private void handleOverseasOrderBook(String[] fields) {
         if (fields.length < 14) return;
-        String symbol = fields[0];
+        // fields[0]은 "DNASMU" 형태 → 앞 4자리(D+거래소3자리) 제거하여 순수 심볼 추출
+        String rawSymbol = fields[0];
+        String symbol = rawSymbol.length() > 4 ? rawSymbol.substring(4) : rawSymbol;
 
         OrderBookDto dto = new OrderBookDto();
         dto.setSymbol(symbol);
