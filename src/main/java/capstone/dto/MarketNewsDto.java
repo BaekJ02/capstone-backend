@@ -12,6 +12,7 @@ import java.util.List;
 @AllArgsConstructor
 public class MarketNewsDto {
     private String updatedAt;
+    private String weather;  // SUNNY, CLOUDY, RAINY, STORM
     private List<String> headlines;
     private SectorDto positive;
     private SectorDto negative;
