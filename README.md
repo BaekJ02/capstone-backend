@@ -860,6 +860,77 @@ GET {ngrok주소}/api/market/news/domestic
 
 ---
 
+### 🎯 데일리 퀴즈 API
+
+> ⚠️ 로그인 후에 사용 가능해요.
+
+#### 오늘의 퀴즈 조회
+
+```
+GET {ngrok주소}/api/quiz/today
+```
+
+**응답**
+```json
+{
+    "id": 1,
+    "question": "PER(주가수익비율)이 낮다는 것은 어떤 의미일까요?",
+    "type": "MULTIPLE",
+    "options": [
+        "주식의 수익성이 떨어져서 위험도가 높다는 뜻입니다",
+        "같은 수익을 올리는 기업에 비해 주가가 저평가되어 있다는 뜻입니다",
+        "기업의 순자산 가치가 현저히 낮다는 뜻입니다",
+        "기업의 부채 비율이 높다는 뜻입니다"
+    ],
+    "quizDate": "2026-05-27",
+    "alreadySolved": false,
+    "isCorrect": null
+}
+```
+
+- `type`: OX 또는 MULTIPLE (랜덤 생성)
+- `options`: 4지선다일 때만 존재, OX일 때는 null
+- `alreadySolved`: 오늘 이미 풀었는지 여부 (개발 중엔 항상 false)
+
+---
+
+#### 정답 제출
+
+```
+POST {ngrok주소}/api/quiz/submit
+```
+
+**요청 Body**
+```json
+{
+    "quizId": 1,
+    "answer": "같은 수익을 올리는 기업에 비해 주가가 저평가되어 있다는 뜻입니다"
+}
+```
+
+- OX 퀴즈: `"answer": "O"` 또는 `"answer": "X"`
+- 4지선다: `"answer": "보기 텍스트 그대로"`
+
+**응답**
+```json
+{
+    "isCorrect": true,
+    "answer": "같은 수익을 올리는 기업에 비해 주가가 저평가되어 있다는 뜻입니다",
+    "explanation": "PER은 주가를 주당순이익(EPS)으로 나눈 지표로...",
+    "rewardSymbol": "207940",
+    "rewardName": "삼성바이오로직스",
+    "rewardMarket": "KOSPI",
+    "rewardPrice": 1384000.0
+}
+```
+
+- 정답 시 국내 시가총액 TOP20 + 해외 시가총액 TOP20 중 랜덤 1주 보유종목에 자동 추가
+- 오답 시 `rewardSymbol`, `rewardName`, `rewardMarket`, `rewardPrice` 모두 null
+- 퀴즈는 매일 00시에 자동 생성 (OX/4지선다 랜덤)
+- 개발 중엔 하루 여러 번 풀기 가능, 배포 시 계정별 하루 1회로 제한 예정
+
+---
+
 ## WebSocket 실시간 데이터
 
 ### 연결 방법
