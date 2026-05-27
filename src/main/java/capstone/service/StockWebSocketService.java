@@ -21,7 +21,7 @@ public class StockWebSocketService {
     private final MarketTimeService marketTimeService;
 
     // 국내 주식 - 정규장이면 KIS 웹소켓, 아니면 REST API 폴링
-    @Scheduled(fixedDelay = 3000)
+    @Scheduled(fixedDelay = 5000)
     public void sendDomesticStockPrices() {
         for (String symbol : subscriptionService.getDomesticSymbols()) {
             try {
@@ -31,7 +31,7 @@ public class StockWebSocketService {
                     StockPriceDto price = stockService.getDomesticStockPrice(symbol);
                     messagingTemplate.convertAndSend("/topic/domestic/" + symbol, price);
                 }
-                Thread.sleep(100);
+                Thread.sleep(200);
             } catch (Exception e) {
                 log.error("국내주식 처리 실패: {}", e.getMessage());
             }
@@ -39,7 +39,7 @@ public class StockWebSocketService {
     }
 
     // 미국 주식 - 정규장이면 KIS 웹소켓, 아니면 REST API
-    @Scheduled(fixedDelay = 3000, initialDelay = 2000)
+    @Scheduled(fixedDelay = 5000, initialDelay = 2000)
     public void sendOverseasStockPrices() {
         for (String symbolWithExchange : subscriptionService.getOverseasSymbols()) {
             try {
@@ -52,7 +52,7 @@ public class StockWebSocketService {
                     StockPriceDto price = stockService.getOverseasStockPrice(symbol, exchange);
                     messagingTemplate.convertAndSend("/topic/overseas/" + symbol, price);
                 }
-                Thread.sleep(100);
+                Thread.sleep(200);
             } catch (Exception e) {
                 log.error("해외주식 조회 실패: {}", e.getMessage());
             }
