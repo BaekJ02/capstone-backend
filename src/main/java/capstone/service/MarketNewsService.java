@@ -37,15 +37,6 @@ public class MarketNewsService {
     @Value("${claude.api.key}")
     private String claudeApiKey;
 
-    @Value("${naver.api.url}")
-    private String naverApiUrl;
-
-    @Value("${naver.client.id}")
-    private String naverClientId;
-
-    @Value("${naver.client.secret}")
-    private String naverClientSecret;
-
     private MarketNewsDto cachedOverseasNews = null;
     private MarketNewsDto cachedDomesticNews = null;
 
@@ -133,37 +124,44 @@ public class MarketNewsService {
         }
     }
 
-    // ── 국내 뉴스 제목 수집 (네이버) ──
+    // ── 국내 뉴스 제목 수집 (KIS) ──
     private List<String> fetchDomesticNewsTitles() {
         try {
+            String url = UriComponentsBuilder
+                    .fromUriString(kisBaseUrl + "/uapi/domestic-stock/v1/quotations/news-title")
+                    .queryParam("FID_NEWS_OFER_ENTP_CODE", "")
+                    .queryParam("FID_COND_MRKT_CLS_CODE", "")
+                    .queryParam("FID_INPUT_ISCD", "")
+                    .queryParam("FID_TITL_CNTT", "")
+                    .queryParam("FID_INPUT_DATE_1", "")
+                    .queryParam("FID_INPUT_HOUR_1", "")
+                    .queryParam("FID_RANK_SORT_CLS_CODE", "")
+                    .queryParam("FID_INPUT_SRNO", "")
+                    .toUriString();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("authorization", "Bearer " + kisAuthService.getAccessToken());
+            headers.set("appkey", appKey);
+            headers.set("appsecret", appSecret);
+            headers.set("tr_id", "FHKST01011800");
+            headers.set("custtype", "P");
+
+            HttpEntity<Void> request = new HttpEntity<>(headers);
+            Map<String, Object> response = restTemplate.exchange(url, HttpMethod.GET, request, Map.class).getBody();
+
+            List<Map<String, Object>> output = (List<Map<String, Object>>) response.get("output");
+            if (output == null) return new ArrayList<>();
+
+            // 공시(F,G,N)와 인포스탁(7) 제외, 언론사 뉴스만 필터링
+            Set<String> excludeCodes = Set.of("F", "G", "N", "7");
+
             List<String> titles = new ArrayList<>();
-            String[] keywords = {"코스피 증시", "국내 주식 시황"};
-
-            for (String keyword : keywords) {
-                String url = UriComponentsBuilder
-                        .fromUriString(naverApiUrl)
-                        .queryParam("query", keyword)
-                        .queryParam("display", 5)
-                        .queryParam("sort", "date")
-                        .toUriString();
-
-                HttpHeaders headers = new HttpHeaders();
-                headers.set("X-Naver-Client-Id", naverClientId);
-                headers.set("X-Naver-Client-Secret", naverClientSecret);
-
-                HttpEntity<Void> request = new HttpEntity<>(headers);
-                Map<String, Object> response = restTemplate.exchange(url, HttpMethod.GET, request, Map.class).getBody();
-
-                List<Map<String, Object>> items = (List<Map<String, Object>>) response.get("items");
-                if (items != null) {
-                    for (Map<String, Object> item : items) {
-                        String title = (String) item.get("title");
-                        if (title != null) {
-                            title = title.replaceAll("<[^>]*>", "").replaceAll("&quot;", "\"").replaceAll("&amp;", "&");
-                            titles.add(title);
-                        }
-                    }
-                }
+            for (Map<String, Object> item : output) {
+                if (titles.size() >= 10) break;
+                String entp_code = String.valueOf(item.get("news_ofer_entp_code"));
+                if (excludeCodes.contains(entp_code)) continue;
+                String title = (String) item.get("hts_pbnt_titl_cntt");
+                if (title != null && !title.isBlank()) titles.add(title);
             }
             log.info("국내 뉴스 제목 {}건 수집", titles.size());
             return titles;
