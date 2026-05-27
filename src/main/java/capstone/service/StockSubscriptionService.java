@@ -42,11 +42,15 @@ public class StockSubscriptionService {
     }
 
     public void subscribeOverseasOnly(String symbolWithExchange) {
-        overseasSymbols.add(symbolWithExchange);
+        if (overseasSymbols.add(symbolWithExchange)) {
+            kisWebSocketClient.subscribeOverseas(symbolWithExchange);
+        }
     }
 
     public void subscribeDomesticOnly(String symbol) {
-        domesticSymbols.add(symbol);
+        if (domesticSymbols.add(symbol)) {
+            kisWebSocketClient.subscribe(symbol);
+        }
     }
 
     public void subscribeDomesticPriceOnly(String symbol) {
