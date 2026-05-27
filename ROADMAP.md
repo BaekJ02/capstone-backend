@@ -90,14 +90,12 @@
   - 국내: KIS `/uapi/domestic-stock/v1/ranking/market-cap` (tr_id: FHPST01740000), stck_avls 기준 정렬
   - 미국: KIS `/uapi/overseas-stock/v1/ranking/market-cap` (tr_id: HHDFS76350100, CURR_GB=0), NYS+NAS+AMS 통합, tomv 기준 정렬
   - RankingItemDto에 marketCap 필드 추가
-- AI 시장 뉴스 API 구현 (GET /api/market/news, 인증 불필요)
-  - MarketNewsService, MarketNewsController, MarketNewsDto 신규 생성
-  - KIS 해외뉴스종합(제목) API (HHPSTH60100C1, NATION_CD=US) 최근 10건
-  - NAS 거래대금 상위 20개 종목과 함께 Claude Haiku로 분석
-  - 응답: updatedAt, headlines(3개), positive(sector+reason+stocks), negative(sector+reason+stocks), summary
-  - StockDto: symbol, name, changePercent / SectorDto: sector, reason, stocks
-  - 스케줄: 매일 08:00/14:00/16:00/20:00/22:30/05:00 자동 갱신 (@PostConstruct 제거, 스케줄만 운영)
-  - build.gradle에 jackson-databind 추가, AppConfig에 ObjectMapper 빈 추가
+- AI 시장 뉴스 API 구현 (국내/해외 분리, 인증 불필요)
+  - `GET /api/market/news/overseas` — KIS 해외뉴스종합(HHPSTH60100C1, NATION_CD=US) + NAS 거래대금 상위 20종목 → Claude Haiku 분석
+  - `GET /api/market/news/domestic` — KIS 종합 시황/공시(FHKST01011800) + 국내 거래대금 상위 20종목 → Claude Haiku 분석 (공시F/G/N, 인포스탁7 필터링)
+  - 응답: updatedAt, weather(SUNNY/CLOUDY/RAINY/STORM), headlines(3개), positive(sector+reason+stocks), negative(sector+reason+stocks), summary
+  - `@PostConstruct`로 서버 시작 시 국내/해외 각각 1회 갱신
+  - `@Scheduled` cron: 매일 08:00/14:00/16:00/20:00, 22:30, 05:00 갱신
 
 ---
 
@@ -119,11 +117,12 @@
 
 ## 🔨 다음 할 것
 
-1. 프론트엔드 - 시가총액 순위 탭 추가 (MARKET_CAP)
-2. 프론트엔드 - 미국주식 호가창 UI 구현
-3. 장외 시간 REST 폴링 초당 거래건수 초과 에러 개선
-4. AI 분석 출력 양식 고정 → 3D 큐빅 AI 모델 도입 후 진행 예정
-5. 호가창 잔량 1/2 문제 수정 (KIS API 한계로 해결 어려울 수 있음)
+1. 프론트엔드 - 국내/해외 탭 연동 (주식 목록 + 뉴스 동시 전환, 날씨 표시)
+2. 프론트엔드 - 시가총액 순위 탭 추가 (MARKET_CAP)
+3. 프론트엔드 - 미국주식 호가창 UI 구현
+4. 장외 시간 REST 폴링 초당 거래건수 초과 에러 개선
+5. AI 분석 출력 양식 고정 → 3D 큐빅 AI 모델 도입 후 진행 예정
+6. 호가창 잔량 1/2 문제 수정 (KIS API 한계로 해결 어려울 수 있음)
 
 ---
 
@@ -142,20 +141,10 @@
 
 ---
 
-### 3. 주식 시장 날씨 🌤️
-
-**시장 상황을 날씨로 직관적으로 표현**
-
-| 날씨 | 의미 |
-|------|------|
-| ☀️ 맑음 | 활발하고 좋은 장 |
-| ⛅ 구름 조금 | 평온한 횡보장 |
-| 🌥️ 흐림 | 약보합, 관망 분위기 |
-| 🌧️ 비 | 하락장, 투자 주의 |
-| ⛈️ 폭풍 | 급락 + 변동성 심함 |
-
-- 코스피 / 코스닥 / 나스닥 각각 날씨 표시 가능
-- 나중에 AI 감성 분석과 연동하면 더 정교해짐
+### ~~3. 주식 시장 날씨~~ ✅ 완료 (AI 뉴스에 통합)
+- AI 시장 뉴스 API의 `weather` 필드로 구현 완료
+- SUNNY(상승장) / CLOUDY(혼조세) / RAINY(하락장) / STORM(급락/패닉)
+- 국내/해외 각각 별도 weather 값 제공
 
 ---
 

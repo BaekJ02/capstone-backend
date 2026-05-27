@@ -808,16 +808,23 @@ GET {ngrok주소}/api/market/indices
 
 > ✅ 로그인 없이 누구나 사용 가능해요.
 
-#### AI 시장 뉴스 조회
+#### 해외(미국) 시장 뉴스 조회
 
 ```
-GET {ngrok주소}/api/market/news
+GET {ngrok주소}/api/market/news/overseas
 ```
 
-**응답**
+#### 국내 시장 뉴스 조회
+
+```
+GET {ngrok주소}/api/market/news/domestic
+```
+
+**응답 (공통)**
 ```json
 {
-    "updatedAt": "2026-05-26 13:11",
+    "updatedAt": "2026-05-27 14:37",
+    "weather": "SUNNY",
     "headlines": [
         "뉴스 핵심 요약 1",
         "뉴스 핵심 요약 2",
@@ -845,10 +852,11 @@ GET {ngrok주소}/api/market/news
 }
 ```
 
-- KIS 해외뉴스 API(미국) 제목 10건 + NAS 거래대금 상위 20개 종목을 Claude AI가 분석
+- 해외 뉴스: KIS 해외뉴스종합 API(미국, NATION_CD=US) 제목 10건 + NAS 거래대금 상위 20종목 → Claude AI 분석
+- 국내 뉴스: KIS 종합 시황/공시(제목) API(FHKST01011800) 제목 10건 + 국내 거래대금 상위 20종목 → Claude AI 분석 (공시/데이터성 뉴스 필터링)
+- `weather` 필드: SUNNY(상승장), CLOUDY(혼조세), RAINY(하락장), STORM(급락/패닉)
 - 매일 08:00 / 14:00 / 16:00 / 20:00 / 22:30 / 05:00 자동 갱신 (캐싱)
 - 캐시가 없는 경우 204 No Content 반환
-- positive/negative 각각 sector, reason, stocks(symbol+name+changePercent) 포함
 
 ---
 
