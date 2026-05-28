@@ -76,6 +76,12 @@
   - StockSubscriptionService: subscribeOverseasOrderbook / unsubscribeOverseasOrderbook 추가
   - StockSubscriptionController: /subscribe/overseas/orderbook, /unsubscribe/overseas/orderbook 추가
   - 응답 토픽: /topic/orderbook/{symbol} (국내와 동일 구조)
+- 미국주식 호가창 WebSocket 버그 수정
+  - `KisWebSocketClient.handleOverseasOrderBook`: `fields[0]`이 `DNASMU` 형태로 오는 것을 `MU`로 파싱하도록 수정 (`rawSymbol.substring(4)`)
+  - `StockSubscriptionService.subscribeOverseasOnly`: `kisWebSocketClient.subscribeOverseas()` 호출 누락 수정
+  - `StockSubscriptionService.subscribeDomesticOnly`: `kisWebSocketClient.subscribe()` 호출 누락 수정
+  - 미국 호가창 REST API 추가 (`GET /api/stocks/orderbook/overseas/{symbol}`, 빈 데이터 반환)
+- 장외 시간 REST 폴링 간격 개선 (3초→5초, Thread.sleep 100ms→200ms)
 - 미국주식 실시간 체결 데이터 파싱 개선 (HDFSCNT0)
   - TradeTickDto 파싱 추가, 응답 토픽: /topic/tradetick/overseas/{symbol}
   - ASVL(매수체결량) vs BIVL(매도체결량) 비교로 매수/매도 구분
@@ -116,20 +122,19 @@
 - 정규장 마감 직전(15:27~15:30) KIS API 불안정 구간 존재
   - 해당 시간대에 웹소켓 데이터가 일시적으로 끊기거나 NaN 표시될 수 있음
   - 코드 버그가 아닌 KIS API 자체 특성 (동시호가 전환 구간)
-- 미국주식 호가창(HDFSASP0)/체결(HDFSCNT0) 웹소켓 구현 완료, 미국 정규장 테스트 필요
-- 장외 시간 REST 폴링 초당 거래건수 초과 에러 (미수정)
-- 정규장 외 시간대 실시간 주가: KIS API 한계로 구현 불가 (3초 폴링 방식으로 대체 제공)
+- 미국주식 호가창(HDFSASP0)/체결(HDFSCNT0) 웹소켓 구현 및 테스트 완료
+- 장외 시간 REST 폴링 간격 개선 완료 (5초/200ms) — 에러 빈도 감소, 완전 해결은 아님
+- 정규장 외 시간대 실시간 주가: KIS API 한계로 구현 불가 (5초 폴링 방식으로 대체 제공)
 
 ---
 
 ## 🔨 다음 할 것
 
 1. 프론트엔드 - 데일리 퀴즈 모달 UI + 뽑기 애니메이션
-2. 프론트엔드 - 미국주식 호가창 UI 구현
-3. 장외 시간 REST 폴링 초당 거래건수 초과 에러 개선
-4. AI 분석 출력 양식 고정 → 3D 큐빅 AI 모델 도입 후 진행 예정
-5. 호가창 잔량 1/2 문제 수정 (KIS API 한계로 해결 어려울 수 있음)
-6. 배포 시 퀴즈 하루 1회 제한 활성화
+2. 프론트엔드 - 미국주식 호가창 UI 최종 점검 (안내 문구 조건 수정)
+3. AI 분석 출력 양식 고정 → 3D 큐빅 AI 모델 도입 후 진행 예정
+4. 호가창 잔량 1/2 문제 수정 (KIS API 한계로 해결 어려울 수 있음)
+5. 배포 시 퀴즈 하루 1회 제한 활성화
 
 ---
 

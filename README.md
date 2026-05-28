@@ -554,12 +554,46 @@ GET {ngrok주소}/api/stocks/orderbook/domestic/{종목코드}
 
 ---
 
+#### 미국주식 호가창 REST
+
+```
+GET {ngrok주소}/api/stocks/orderbook/overseas/{종목코드}?exchange={거래소코드}
+```
+
+**응답**
+```json
+{
+    "symbol": "AAPL",
+    "asks": [],
+    "bids": [],
+    "totalAskQty": "0",
+    "totalBidQty": "0"
+}
+```
+
+- KIS REST API 미제공으로 초기 빈 데이터 반환
+- 실시간 호가는 WebSocket(`/app/subscribe/overseas/orderbook`)으로 수신
+- 미국 정규장(22:30~05:00)에만 WebSocket 데이터 수신 가능
+
+---
+
 #### 실시간 호가창 웹소켓
 
 국내주식 구독 시 자동으로 함께 구독돼요.
 
 ```
 구독 토픽: /topic/orderbook/{symbol}
+```
+
+```javascript
+// 구독 시작 (종목 상세용 구독과 함께 자동 구독됨)
+client.publish({ destination: '/app/subscribe/domestic', body: '005930' });
+
+// 호가 수신
+client.subscribe('/topic/orderbook/005930', (message) => {
+    const data = JSON.parse(message.body);
+    // {symbol: "005930", asks: [{price, quantity}, ...], bids: [{price, quantity}, ...], totalAskQty, totalBidQty}
+});
 ```
 
 ---
@@ -573,6 +607,17 @@ GET {ngrok주소}/api/stocks/orderbook/domestic/{종목코드}
 ```
 
 **응답 필드**: `symbol`, `price`, `volume`, `tradeType` (BUY 또는 SELL)
+
+```javascript
+// 구독 시작 (종목 상세용 구독과 함께 자동 구독됨)
+client.publish({ destination: '/app/subscribe/domestic', body: '005930' });
+
+// 체결 수신
+client.subscribe('/topic/tradetick/005930', (message) => {
+    const data = JSON.parse(message.body);
+    // {symbol: "005930", price: "75000", volume: "100", tradeType: "BUY" 또는 "SELL"}
+});
+```
 
 ---
 
@@ -1169,7 +1214,7 @@ candleSeries.setData(chartData.data.map(item => ({
 8. **분봉 데이터는 장중에만 의미있는 데이터예요.**
 9. **초기 가상 잔고는 1,000만원**이에요.
 10. **미국주식 호가창/체결 WebSocket**은 구현 완료 (HDFSASP0/HDFSCNT0)이에요. 미국 정규장 시간에만 실시간 데이터가 수신돼요. 장외 시간에는 데이터가 없어요.
-11. **정규장 외 시간대 실시간 주가**는 KIS API 한계로 REST API 3초 폴링 방식으로 제공돼요 (진짜 실시간 아님).
+11. **정규장 외 시간대 실시간 주가**는 KIS API 한계로 REST API 5초 폴링 방식으로 제공돼요 (진짜 실시간 아님).
 12. **미국 주식 거래 시간(서머타임 적용 시)**: 한국 기준 밤 22시 30분 ~ 새벽 5시
 
 ---
