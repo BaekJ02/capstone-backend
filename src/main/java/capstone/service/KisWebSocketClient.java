@@ -264,7 +264,7 @@ public class KisWebSocketClient {
         // 매도호가: PASK1~10, 높은가격→낮은가격 역순
         List<OrderBookDto.OrderBookEntry> asks = new ArrayList<>();
         for (int i = 10; i >= 1; i--) {
-            int base = 10 + (i - 1) * 6;
+            int base = 14 + (i - 1) * 6;
             if (base + 3 >= fields.length) continue;
             OrderBookDto.OrderBookEntry entry = new OrderBookDto.OrderBookEntry();
             entry.setPrice(fields[base + 1]);    // PASKi
@@ -276,7 +276,7 @@ public class KisWebSocketClient {
         // 매수호가: PBID1~10
         List<OrderBookDto.OrderBookEntry> bids = new ArrayList<>();
         for (int i = 1; i <= 10; i++) {
-            int base = 10 + (i - 1) * 6;
+            int base = 14 + (i - 1) * 6;
             if (base + 2 >= fields.length) continue;
             OrderBookDto.OrderBookEntry entry = new OrderBookDto.OrderBookEntry();
             entry.setPrice(fields[base]);        // PBIDi
