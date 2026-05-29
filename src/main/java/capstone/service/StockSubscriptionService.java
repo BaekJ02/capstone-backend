@@ -31,6 +31,7 @@ public class StockSubscriptionService {
 
     public void unsubscribeOverseas(String symbol) {
         overseasSymbols.remove(symbol);
+        kisWebSocketClient.unsubscribeOverseas(symbol);
     }
 
     public Set<String> getDomesticSymbols() {
@@ -64,11 +65,16 @@ public class StockSubscriptionService {
         kisWebSocketClient.unsubscribePriceOnly(symbol);
     }
 
+    private final Set<String> overseasOrderbookSymbols = ConcurrentHashMap.newKeySet();
+
     public void subscribeOverseasOrderbook(String symbolWithExchange) {
-        kisWebSocketClient.subscribeOverseasOrderbook(symbolWithExchange);
+        if (overseasOrderbookSymbols.add(symbolWithExchange)) {
+            kisWebSocketClient.subscribeOverseasOrderbook(symbolWithExchange);
+        }
     }
 
     public void unsubscribeOverseasOrderbook(String symbolWithExchange) {
+        overseasOrderbookSymbols.remove(symbolWithExchange);
         kisWebSocketClient.unsubscribeOverseasOrderbook(symbolWithExchange);
     }
 }
