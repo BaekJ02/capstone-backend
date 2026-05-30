@@ -4,7 +4,27 @@
       "Bash(git update-index *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(./gradlew build *)",
+      "Bash(./gradlew compileJava)",
+      "Bash(./gradlew bootRun *)",
+      "Bash(Start-Sleep -Seconds 25)",
+      "Bash(curl -s \"http://localhost:8080/api/market/domestic/ranking?type=VOLUME\")",
+      "Bash(ConvertFrom-Json)",
+      "Bash(Select-Object -First 5)",
+      "Bash(Format-List)",
+      "Bash(pkill -f 'bootRun')",
+      "Bash(curl -s http://localhost:8080/actuator/health)",
+      "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); [print\\(f'{i+1}. {r[\\\\\"name\\\\\"]} | volume={r[\\\\\"volume\\\\\"]}'\\) for i,r in enumerate\\(data[:5]\\)]\")",
+      "Bash(curl -s http://localhost:8080/api/market/domestic/ranking?type=VOLUME)",
+      "Bash(lsof -ti:8080)",
+      "Bash(xargs kill -9)",
+      "PowerShell(Get-NetTCPConnection *)",
+      "PowerShell(Get-Process *)",
+      "PowerShell(Stop-Process *)",
+      "PowerShell(Get-WmiObject *)",
+      "PowerShell(netstat *)",
+      "Bash(git restore *)"
     ]
   }
 }

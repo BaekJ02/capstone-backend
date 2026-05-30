@@ -586,6 +586,7 @@
         <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:12px">
             <button class="tab-btn active" id="mainTab1" onclick="switchMainTab('trading')">📈 트레이딩</button>
             <button class="tab-btn" id="mainTab2" onclick="switchMainTab('ai')">✨ AI 분석</button>
+            <button class="tab-btn" id="mainTab3" onclick="switchMainTab('ranking')">📊 시장 순위</button>
         </div>
 
         <!-- 트레이딩 탭 -->
@@ -873,6 +874,36 @@
             </div>
 
         </div> <!-- end aiTabContent -->
+
+        <!-- 시장 순위 탭 -->
+        <div id="rankingTabContent" class="hidden">
+            <div class="card">
+                <div style="display:flex;gap:8px;margin-bottom:10px">
+                    <button class="tab-btn active" id="rankingMktDomestic" onclick="switchRankingMarket('domestic')">🇰🇷 국내주식</button>
+                    <button class="tab-btn" id="rankingMktOverseas" onclick="switchRankingMarket('overseas')">🇺🇸 미국주식</button>
+                </div>
+                <div style="display:flex;gap:8px;margin-bottom:16px">
+                    <button class="tab-btn active" id="rankingTypeRISE" onclick="switchRankingType('RISE')">🔴 급상승</button>
+                    <button class="tab-btn" id="rankingTypeFALL" onclick="switchRankingType('FALL')">🔵 급하락</button>
+                    <button class="tab-btn" id="rankingTypeVOLUME" onclick="switchRankingType('VOLUME')">📦 거래대금</button>
+                </div>
+                <div id="rankingLoading" class="hidden" style="color:var(--text-sub);font-size:13px;margin-bottom:10px">데이터 불러오는 중...</div>
+                <table style="width:100%;border-collapse:collapse;font-size:13px">
+                    <thead>
+                        <tr style="border-bottom:1px solid var(--border);color:var(--text-sub)">
+                            <th style="padding:8px 6px;text-align:center;font-weight:600">순위</th>
+                            <th style="padding:8px 6px;text-align:left;font-weight:600">종목코드</th>
+                            <th style="padding:8px 6px;text-align:left;font-weight:600">종목명</th>
+                            <th style="padding:8px 6px;text-align:right;font-weight:600">현재가</th>
+                            <th style="padding:8px 6px;text-align:right;font-weight:600">전일대비</th>
+                            <th style="padding:8px 6px;text-align:right;font-weight:600">등락률</th>
+                            <th style="padding:8px 6px;text-align:right;font-weight:600">거래량</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rankingTableBody"></tbody>
+                </table>
+            </div>
+        </div> <!-- end rankingTabContent -->
 
     </div>
 
@@ -1225,10 +1256,21 @@
             document.getElementById('overseasKeyword').value = name;
             document.getElementById('overseasSearchResults').innerHTML = '';
             setTradeForm(symbol, name, market);
-            document.getElementById('orderBookCard').style.display = 'none';
+
+            // 호가창 표시 및 초기화
+            document.getElementById('orderBookCard').style.display = '';
+            document.getElementById('orderBookTitle').textContent = `${name} 호가 (미국)`;
+            document.getElementById('askBody').innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-sub);padding:20px">호가 수신 대기 중...</td></tr>';
+            document.getElementById('bidBody').innerHTML = '';
+            document.getElementById('tradeTickList').innerHTML = '<div style="color:var(--text-sub);text-align:center;padding:20px">체결 내역 없음</div>';
 
             if (subscriptions['overseas']) subscriptions['overseas'].unsubscribe();
+            if (subscriptions['overseasOrderbook']) subscriptions['overseasOrderbook'].unsubscribe();
+            if (subscriptions['overseasTick']) subscriptions['overseasTick'].unsubscribe();
+
             stompClient.send("/app/subscribe/overseas", {}, `${symbol},${ovsExchange}`);
+            stompClient.send("/app/subscribe/overseas/orderbook", {}, `${symbol},${ovsExchange}`);
+
             subscriptions['overseas'] = stompClient.subscribe(`/topic/overseas/${symbol}`, msg => {
                 const data = JSON.parse(msg.body);
                 currentPrices[symbol] = parseFloat(data.price);
@@ -1245,6 +1287,17 @@
             `;
                 document.getElementById('tradePrice').value = data.price;
                 updateTradeTotal();
+            });
+
+            // 미국 호가 구독
+            subscriptions['overseasOrderbook'] = stompClient.subscribe(`/topic/orderbook/${symbol}`, msg => {
+                const data = JSON.parse(msg.body);
+                renderOverseasOrderBook(data, symbol);
+            });
+
+            // 미국 체결 구독
+            subscriptions['overseasTick'] = stompClient.subscribe(`/topic/tradetick/overseas/${symbol}`, msg => {
+                addTradeTick(JSON.parse(msg.body));
             });
         }
 
@@ -1265,7 +1318,10 @@
         function clearOverseas() {
             if (ovsSymbol) {
                 if (subscriptions['overseas']) { subscriptions['overseas'].unsubscribe(); delete subscriptions['overseas']; }
+                if (subscriptions['overseasOrderbook']) { subscriptions['overseasOrderbook'].unsubscribe(); delete subscriptions['overseasOrderbook']; }
+                if (subscriptions['overseasTick']) { subscriptions['overseasTick'].unsubscribe(); delete subscriptions['overseasTick']; }
                 stompClient.send("/app/unsubscribe/overseas", {}, `${ovsSymbol},${ovsExchange}`);
+                stompClient.send("/app/unsubscribe/overseas/orderbook", {}, `${ovsSymbol},${ovsExchange}`);
                 ovsSymbol = null; ovsMarket = null; ovsExchange = null;
             }
             document.getElementById('overseasKeyword').value = '';
@@ -1301,6 +1357,32 @@
             const totalBidQty = data.bids.reduce((sum, e) => { const q = parseInt(e.quantity); return sum + (isNaN(q) ? 0 : q); }, 0);
             document.getElementById('totalAskQty').textContent = `매도잔량 합계: ${formatNumber(totalAskQty)}`;
             document.getElementById('totalBidQty').textContent = `매수잔량 합계: ${formatNumber(totalBidQty)}`;
+        }
+
+        function renderOverseasOrderBook(data, symbol) {
+            const maxQty = Math.max(
+                ...data.asks.map(e => parseFloat(e.quantity) || 0),
+                ...data.bids.map(e => parseFloat(e.quantity) || 0),
+                1
+            );
+            document.getElementById('askBody').innerHTML = data.asks.map(e => {
+                const w = Math.round((parseFloat(e.quantity) || 0) / maxQty * 100);
+                return `<tr class="ask-row">
+                <td class="qty">${formatNumber(e.quantity)}</td>
+                <td class="bar-cell"><div style="background:var(--down-dim);height:6px;border-radius:2px;width:${w}%;margin-left:auto"></div></td>
+                <td class="price">$${Number(e.price).toFixed(2)}</td>
+            </tr>`;
+            }).join('');
+            document.getElementById('bidBody').innerHTML = data.bids.map(e => {
+                const w = Math.round((parseFloat(e.quantity) || 0) / maxQty * 100);
+                return `<tr class="bid-row">
+                <td class="price">$${Number(e.price).toFixed(2)}</td>
+                <td class="bar-cell"><div style="background:var(--accent-dim);height:6px;border-radius:2px;width:${w}%"></div></td>
+                <td class="qty">${formatNumber(e.quantity)}</td>
+            </tr>`;
+            }).join('');
+            const cur = currentPrices[symbol];
+            document.getElementById('currentPriceDivider').textContent = cur ? `$${Number(cur).toFixed(2)}` : '';
         }
 
         function addTradeTick(data) {
@@ -1701,9 +1783,62 @@
         function switchMainTab(tab) {
             document.getElementById('tradingTabContent').classList.toggle('hidden', tab !== 'trading');
             document.getElementById('aiTabContent').classList.toggle('hidden', tab !== 'ai');
+            document.getElementById('rankingTabContent').classList.toggle('hidden', tab !== 'ranking');
             document.getElementById('mainTab1').classList.toggle('active', tab === 'trading');
             document.getElementById('mainTab2').classList.toggle('active', tab === 'ai');
+            document.getElementById('mainTab3').classList.toggle('active', tab === 'ranking');
             if (tab === 'ai') loadAiPortfolio();
+            if (tab === 'ranking') loadRanking();
+        }
+
+        // ===== 시장 순위 =====
+        let rankingMarket = 'domestic';
+        let rankingType = 'RISE';
+
+        function switchRankingMarket(market) {
+            rankingMarket = market;
+            document.getElementById('rankingMktDomestic').classList.toggle('active', market === 'domestic');
+            document.getElementById('rankingMktOverseas').classList.toggle('active', market === 'overseas');
+            const volBtn = document.getElementById('rankingTypeVOLUME');
+            volBtn.textContent = market === 'domestic' ? '📦 거래대금' : '📦 거래량';
+            loadRanking();
+        }
+
+        function switchRankingType(type) {
+            rankingType = type;
+            document.getElementById('rankingTypeRISE').classList.toggle('active', type === 'RISE');
+            document.getElementById('rankingTypeFALL').classList.toggle('active', type === 'FALL');
+            document.getElementById('rankingTypeVOLUME').classList.toggle('active', type === 'VOLUME');
+            loadRanking();
+        }
+
+        async function loadRanking() {
+            const loading = document.getElementById('rankingLoading');
+            const tbody = document.getElementById('rankingTableBody');
+            loading.classList.remove('hidden');
+            tbody.innerHTML = '';
+            try {
+                const res = await fetch(`${BASE}/api/market/${rankingMarket}/ranking?type=${rankingType}`);
+                const data = await res.json();
+                loading.classList.add('hidden');
+                tbody.innerHTML = data.map((item, i) => {
+                    const pct = parseFloat(item.changePercent);
+                    const cls = pct > 0 ? 'price-up' : pct < 0 ? 'price-down' : '';
+                    const sign = pct > 0 ? '+' : '';
+                    return `<tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:8px 6px;text-align:center;color:var(--text-sub)">${i + 1}</td>
+                        <td style="padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px">${item.symbol}</td>
+                        <td style="padding:8px 6px">${item.name}</td>
+                        <td style="padding:8px 6px;text-align:right;font-family:'JetBrains Mono',monospace">${item.price}</td>
+                        <td style="padding:8px 6px;text-align:right;font-family:'JetBrains Mono',monospace" class="${cls}">${item.change}</td>
+                        <td style="padding:8px 6px;text-align:right;font-weight:600" class="${cls}">${sign}${item.changePercent}%</td>
+                        <td style="padding:8px 6px;text-align:right;color:var(--text-sub)">${item.volume}</td>
+                    </tr>`;
+                }).join('');
+            } catch (e) {
+                loading.classList.add('hidden');
+                tbody.innerHTML = `<tr><td colspan="7" style="padding:20px;text-align:center;color:var(--text-sub)">데이터 로드 실패</td></tr>`;
+            }
         }
 
         // AI 탭 보유종목 로드
