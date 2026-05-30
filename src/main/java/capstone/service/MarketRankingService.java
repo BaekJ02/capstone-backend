@@ -375,4 +375,5 @@ public class MarketRankingService {
         Object val = map.get(key);
         return val != null ? String.valueOf(val) : "";
     }
+
 }
