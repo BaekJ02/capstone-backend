@@ -62,6 +62,7 @@
   - 엔드포인트: GET /api/market/domestic/ranking?type=, GET /api/market/overseas/ranking?type=
   - 인증 불필요 (SecurityConfig permitAll 처리)
 - 국내주식 거래대금 순위 정확도 수정 (FID_BLNG_CLS_CODE 0→3, volume 필드 acml_vol→acml_tr_pbmn으로 변경, 실제 거래금액 기준 정렬)
+- 홈화면 거래대금 UI 개선: 국내/해외 거래대금 축약 표시 (조/억 단위, fmtVolume 헬퍼), 해외 거래대금(tamt) 달러→원화 환산 표시, 컬럼 헤더 "거래량"→"거래대금" 통일
 - DB 스키마 정리 완료 (MySQL Workbench DDL 스크립트 추출 — users, holding, orders, watchlist 4개 테이블, 팀원 공유)
 - KisAuthService Race Condition 수정 (getAccessToken/issueAccessToken/getApprovalKey/issueApprovalKey 모두 synchronized, Double-checked locking 패턴으로 토큰 중복 발급 방지)
 - subscribeDomesticOnly / subscribeOverseasOnly 다중 구독 버그 수정 (clear() 제거 — 호출 시 기존 구독 전부 삭제되던 문제)
