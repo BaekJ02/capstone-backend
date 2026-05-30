@@ -122,7 +122,6 @@ public class KisWebSocketClient {
     }
 
     public void subscribeOverseasOrderbook(String symbolWithExchange) {
-        log.info("호가 구독 요청: {} (현재 구독 목록: {})", symbolWithExchange, subscribedOverseasOrderbookSymbols);
         subscribedOverseasOrderbookSymbols.add(symbolWithExchange);
         if (connected) {
             sendOverseasOrderbookSubscribe(symbolWithExchange, kisAuthService.getApprovalKey(), true);
@@ -130,7 +129,6 @@ public class KisWebSocketClient {
     }
 
     public void unsubscribeOverseasOrderbook(String symbolWithExchange) {
-        log.info("호가 구독 취소: {} (현재 구독 목록: {})", symbolWithExchange, subscribedOverseasOrderbookSymbols);
         subscribedOverseasOrderbookSymbols.remove(symbolWithExchange);
         if (connected) {
             sendOverseasOrderbookSubscribe(symbolWithExchange, kisAuthService.getApprovalKey(), false);
@@ -183,7 +181,6 @@ public class KisWebSocketClient {
         String symbol = parts[0];
         String exchange = parts.length > 1 ? parts[1] : "NAS";
         String trKey = "D" + exchange + symbol;
-        log.info("KIS HDFSASP0 {} 전송: trKey={}", subscribe ? "구독" : "취소", trKey);
         String message = String.format(
             "{\"header\":{\"approval_key\":\"%s\",\"custtype\":\"P\",\"tr_type\":\"%s\",\"content-type\":\"utf-8\"}," +
             "\"body\":{\"input\":{\"tr_id\":\"HDFSASP0\",\"tr_key\":\"%s\"}}}",
@@ -209,7 +206,6 @@ public class KisWebSocketClient {
     private void handleMessage(String message) {
         try {
             if (message.startsWith("{")) {
-                log.info("KIS 응답 메시지: {}", message.length() > 200 ? message.substring(0, 200) : message);
                 return;
             }
 
@@ -226,7 +222,6 @@ public class KisWebSocketClient {
                 handlePrice(fields);
                 handleTradeTick(fields);
             } else if ("HDFSASP0".equals(trId)) {
-                log.info("HDFSASP0 데이터 수신: {}", fields.length > 0 ? fields[0] : "unknown");
                 handleOverseasOrderBook(fields);
             } else if ("HDFSCNT0".equals(trId)) {
                 if (fields.length < 15) return;
