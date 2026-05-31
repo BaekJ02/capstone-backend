@@ -174,7 +174,7 @@ public class StockInfoService {
             List<Map<String, Object>> ratiosList = restTemplate.getForObject(ratiosUrl, List.class);
             if (ratiosList != null && !ratiosList.isEmpty()) {
                 Map<String, Object> ratios = ratiosList.get(0);
-                per = formatRatio(ratios.get("peRatioTTM"));
+                per = formatRatio(ratios.get("priceToEarningsRatioTTM"));
                 pbr = formatRatio(ratios.get("priceToBookRatioTTM"));
             }
         } catch (Exception e) {
