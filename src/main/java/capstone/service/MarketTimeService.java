@@ -18,6 +18,15 @@ public class MarketTimeService {
         return now.isAfter(LocalTime.of(9, 0)) && now.isBefore(LocalTime.of(15, 30));
     }
 
+    // 국내 시간외 단일가 여부 (평일 16:00~18:00)
+    public boolean isKoreanAfterMarketOpen() {
+        LocalDate date = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        if (date.getDayOfWeek() == DayOfWeek.SATURDAY ||
+            date.getDayOfWeek() == DayOfWeek.SUNDAY) return false;
+        LocalTime now = LocalTime.now(ZoneId.of("Asia/Seoul"));
+        return now.isAfter(LocalTime.of(16, 0)) && now.isBefore(LocalTime.of(18, 0));
+    }
+
     // 미국 정규장 여부 (썸머타임 자동 적용)
     public boolean isUsMarketOpen() {
         LocalDate date = LocalDate.now(ZoneId.of("America/New_York"));

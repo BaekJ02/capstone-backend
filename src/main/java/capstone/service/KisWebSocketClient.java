@@ -35,6 +35,8 @@ public class KisWebSocketClient {
     private final Set<String> subscribedSymbols = ConcurrentHashMap.newKeySet();
     private final Set<String> subscribedOverseasSymbols = ConcurrentHashMap.newKeySet();
     private final Set<String> subscribedOverseasOrderbookSymbols = ConcurrentHashMap.newKeySet();
+    private final Set<String> subscribedAfterMarketSymbols = ConcurrentHashMap.newKeySet();
+    private final Set<String> subscribedAfterMarketOrderbookSymbols = ConcurrentHashMap.newKeySet();
     private boolean connected = false;
     private final AtomicInteger hdfscnt0LogCount = new AtomicInteger(0);
 
@@ -60,6 +62,12 @@ public class KisWebSocketClient {
                     }
                     for (String symbolWithExchange : subscribedOverseasOrderbookSymbols) {
                         sendOverseasOrderbookSubscribe(symbolWithExchange, approvalKey, true);
+                    }
+                    for (String symbol : subscribedAfterMarketSymbols) {
+                        sendAfterMarketSubscribe(symbol, approvalKey, true);
+                    }
+                    for (String symbol : subscribedAfterMarketOrderbookSymbols) {
+                        sendAfterMarketOrderbookSubscribe(symbol, approvalKey, true);
                     }
                 }
 
@@ -149,6 +157,34 @@ public class KisWebSocketClient {
         }
     }
 
+    public void subscribeAfterMarket(String symbol) {
+        subscribedAfterMarketSymbols.add(symbol);
+        if (connected) {
+            sendAfterMarketSubscribe(symbol, kisAuthService.getApprovalKey(), true);
+        }
+    }
+
+    public void unsubscribeAfterMarket(String symbol) {
+        subscribedAfterMarketSymbols.remove(symbol);
+        if (connected) {
+            sendAfterMarketSubscribe(symbol, kisAuthService.getApprovalKey(), false);
+        }
+    }
+
+    public void subscribeAfterMarketOrderbook(String symbol) {
+        subscribedAfterMarketOrderbookSymbols.add(symbol);
+        if (connected) {
+            sendAfterMarketOrderbookSubscribe(symbol, kisAuthService.getApprovalKey(), true);
+        }
+    }
+
+    public void unsubscribeAfterMarketOrderbook(String symbol) {
+        subscribedAfterMarketOrderbookSymbols.remove(symbol);
+        if (connected) {
+            sendAfterMarketOrderbookSubscribe(symbol, kisAuthService.getApprovalKey(), false);
+        }
+    }
+
     private void sendPriceOnlySubscribe(String symbol, String approvalKey, boolean subscribe) {
         String trType = subscribe ? "1" : "2";
         String priceMsg = String.format(
@@ -203,6 +239,26 @@ public class KisWebSocketClient {
         wsClient.send(message);
     }
 
+    private void sendAfterMarketSubscribe(String symbol, String approvalKey, boolean subscribe) {
+        String trType = subscribe ? "1" : "2";
+        String msg = String.format(
+            "{\"header\":{\"approval_key\":\"%s\",\"custtype\":\"P\",\"tr_type\":\"%s\",\"content-type\":\"utf-8\"}," +
+            "\"body\":{\"input\":{\"tr_id\":\"H0STOUP0\",\"tr_key\":\"%s\"}}}",
+            approvalKey, trType, symbol
+        );
+        wsClient.send(msg);
+    }
+
+    private void sendAfterMarketOrderbookSubscribe(String symbol, String approvalKey, boolean subscribe) {
+        String trType = subscribe ? "1" : "2";
+        String msg = String.format(
+            "{\"header\":{\"approval_key\":\"%s\",\"custtype\":\"P\",\"tr_type\":\"%s\",\"content-type\":\"utf-8\"}," +
+            "\"body\":{\"input\":{\"tr_id\":\"H0STOAA0\",\"tr_key\":\"%s\"}}}",
+            approvalKey, trType, symbol
+        );
+        wsClient.send(msg);
+    }
+
     private void handleMessage(String message) {
         try {
             if (message.startsWith("{")) {
@@ -221,6 +277,12 @@ public class KisWebSocketClient {
                 if (fields.length < 6) return;
                 handlePrice(fields);
                 handleTradeTick(fields);
+            } else if ("H0STOUP0".equals(trId)) {
+                if (fields.length < 6) return;
+                handlePrice(fields);
+                handleTradeTick(fields);
+            } else if ("H0STOAA0".equals(trId)) {
+                handleAfterMarketOrderBook(fields);
             } else if ("HDFSASP0".equals(trId)) {
                 handleOverseasOrderBook(fields);
             } else if ("HDFSCNT0".equals(trId)) {
@@ -339,6 +401,36 @@ public class KisWebSocketClient {
             OrderBookDto.OrderBookEntry entry = new OrderBookDto.OrderBookEntry();
             entry.setPrice(fields[offset + 13 + i]);
             entry.setQuantity(fields[offset + 33 + i]);
+            bids.add(entry);
+        }
+        dto.setBids(bids);
+
+        messagingTemplate.convertAndSend("/topic/orderbook/" + symbol, dto);
+    }
+
+    private void handleAfterMarketOrderBook(String[] fields) {
+        if (fields.length < 50) return;
+        String symbol = fields[0];
+
+        OrderBookDto dto = new OrderBookDto();
+        dto.setSymbol(symbol);
+
+        // 매도호가1~9: fields[3]~fields[11], 매도잔량1~9: fields[21]~fields[29] (역순 표시)
+        List<OrderBookDto.OrderBookEntry> asks = new ArrayList<>();
+        for (int i = 8; i >= 0; i--) {
+            OrderBookDto.OrderBookEntry entry = new OrderBookDto.OrderBookEntry();
+            entry.setPrice(fields[3 + i]);
+            entry.setQuantity(fields[21 + i]);
+            asks.add(entry);
+        }
+        dto.setAsks(asks);
+
+        // 매수호가1~9: fields[12]~fields[20], 매수잔량1~9: fields[30]~fields[38]
+        List<OrderBookDto.OrderBookEntry> bids = new ArrayList<>();
+        for (int i = 0; i < 9; i++) {
+            OrderBookDto.OrderBookEntry entry = new OrderBookDto.OrderBookEntry();
+            entry.setPrice(fields[12 + i]);
+            entry.setQuantity(fields[30 + i]);
             bids.add(entry);
         }
         dto.setBids(bids);

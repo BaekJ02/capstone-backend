@@ -61,4 +61,32 @@ public class StockSubscriptionController {
     public void unsubscribeOverseasOrderbook(@Payload String symbol) {
         subscriptionService.unsubscribeOverseasOrderbook(symbol);
     }
+
+    // 시간외 단일가 체결 구독
+    @MessageMapping("/subscribe/domestic/aftermarket")
+    public void subscribeAfterMarket(@Payload String symbol) {
+        log.info("시간외 체결 구독 요청: {}", symbol);
+        subscriptionService.subscribeAfterMarket(symbol);
+    }
+
+    // 시간외 단일가 체결 구독 취소
+    @MessageMapping("/unsubscribe/domestic/aftermarket")
+    public void unsubscribeAfterMarket(@Payload String symbol) {
+        log.info("시간외 체결 구독 취소: {}", symbol);
+        subscriptionService.unsubscribeAfterMarket(symbol);
+    }
+
+    // 시간외 단일가 호가 구독
+    @MessageMapping("/subscribe/domestic/aftermarket/orderbook")
+    public void subscribeAfterMarketOrderbook(@Payload String symbol) {
+        log.info("시간외 호가 구독 요청: {}", symbol);
+        subscriptionService.subscribeAfterMarketOrderbook(symbol);
+    }
+
+    // 시간외 단일가 호가 구독 취소
+    @MessageMapping("/unsubscribe/domestic/aftermarket/orderbook")
+    public void unsubscribeAfterMarketOrderbook(@Payload String symbol) {
+        log.info("시간외 호가 구독 취소: {}", symbol);
+        subscriptionService.unsubscribeAfterMarketOrderbook(symbol);
+    }
 }

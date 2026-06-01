@@ -77,4 +77,33 @@ public class StockSubscriptionService {
         overseasOrderbookSymbols.remove(symbolWithExchange);
         kisWebSocketClient.unsubscribeOverseasOrderbook(symbolWithExchange);
     }
+
+    private final Set<String> afterMarketSymbols = ConcurrentHashMap.newKeySet();
+    private final Set<String> afterMarketOrderbookSymbols = ConcurrentHashMap.newKeySet();
+
+    public void subscribeAfterMarket(String symbol) {
+        if (afterMarketSymbols.add(symbol)) {
+            kisWebSocketClient.subscribeAfterMarket(symbol);
+        }
+    }
+
+    public void unsubscribeAfterMarket(String symbol) {
+        afterMarketSymbols.remove(symbol);
+        kisWebSocketClient.unsubscribeAfterMarket(symbol);
+    }
+
+    public void subscribeAfterMarketOrderbook(String symbol) {
+        if (afterMarketOrderbookSymbols.add(symbol)) {
+            kisWebSocketClient.subscribeAfterMarketOrderbook(symbol);
+        }
+    }
+
+    public void unsubscribeAfterMarketOrderbook(String symbol) {
+        afterMarketOrderbookSymbols.remove(symbol);
+        kisWebSocketClient.unsubscribeAfterMarketOrderbook(symbol);
+    }
+
+    public Set<String> getAfterMarketSymbols() {
+        return afterMarketSymbols;
+    }
 }

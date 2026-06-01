@@ -27,6 +27,8 @@ public class StockWebSocketService {
             try {
                 if (marketTimeService.isKoreanMarketOpen()) {
                     kisWebSocketClient.subscribe(symbol);
+                } else if (marketTimeService.isKoreanAfterMarketOpen()) {
+                    kisWebSocketClient.subscribeAfterMarket(symbol);
                 } else {
                     StockPriceDto price = stockService.getDomesticStockPrice(symbol);
                     messagingTemplate.convertAndSend("/topic/domestic/" + symbol, price);
