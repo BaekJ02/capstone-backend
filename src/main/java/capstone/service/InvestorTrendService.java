@@ -10,6 +10,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -32,7 +33,10 @@ public class InvestorTrendService {
     private String appSecret;
 
     public List<InvestorTrendDto> getInvestorTrend(String symbol) {
-        String today = LocalDate.now().minusDays(1).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        LocalDate targetDate = LocalTime.now().isBefore(LocalTime.of(15, 40))
+                ? LocalDate.now().minusDays(1)
+                : LocalDate.now();
+        String today = targetDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 
         String url = UriComponentsBuilder
                 .fromUriString(kisBaseUrl + "/uapi/domestic-stock/v1/quotations/investor-trade-by-stock-daily")
