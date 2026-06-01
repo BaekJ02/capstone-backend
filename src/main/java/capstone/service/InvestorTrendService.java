@@ -32,7 +32,7 @@ public class InvestorTrendService {
     private String appSecret;
 
     public List<InvestorTrendDto> getInvestorTrend(String symbol) {
-        String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String today = LocalDate.now().minusDays(1).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 
         String url = UriComponentsBuilder
                 .fromUriString(kisBaseUrl + "/uapi/domestic-stock/v1/quotations/investor-trade-by-stock-daily")
