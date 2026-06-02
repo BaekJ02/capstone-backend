@@ -44,6 +44,7 @@ public class SecurityConfig {
                     "/ws/**", "/api/stocks/**",
                     "/api/exchange/**",
                     "/api/market/**",
+                    "/api/ai/cubic/**",
                     "/h2-console/**"
                 ).permitAll()
                 .requestMatchers("/api/**").authenticated()
