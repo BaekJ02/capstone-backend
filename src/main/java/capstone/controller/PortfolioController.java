@@ -1,7 +1,7 @@
 package capstone.controller;
 
 import capstone.dto.PortfolioChartDto;
-import capstone.service.PortfolioChartService;
+import capstone.service.PortfolioSnapshotService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -12,13 +12,13 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/portfolio")
 public class PortfolioController {
 
-    private final PortfolioChartService portfolioChartService;
+    private final PortfolioSnapshotService portfolioSnapshotService;
 
     @GetMapping("/chart")
     public ResponseEntity<PortfolioChartDto> getPortfolioChart(
             @RequestParam(defaultValue = "30") int days) {
         Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        PortfolioChartDto chart = portfolioChartService.getPortfolioChart(userId, days);
+        PortfolioChartDto chart = portfolioSnapshotService.getPortfolioChart(userId, days);
         return ResponseEntity.ok(chart);
     }
 }
