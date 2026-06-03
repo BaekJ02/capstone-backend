@@ -9,6 +9,7 @@ import capstone.service.AiService;
 import capstone.service.CubicAiService;
 import capstone.service.StockService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
@@ -36,29 +38,44 @@ public class AiController {
 
     @PostMapping("/analyze/holdings")
     public ResponseEntity<AiChatResponseDto> analyzeHoldings() {
-        String holdingsText = buildHoldingsText();
-        if (holdingsText == null) {
-            return ResponseEntity.ok(new AiChatResponseDto("보유 종목이 없습니다. 먼저 주식을 매수해주세요."));
+        try {
+            String holdingsText = buildHoldingsText();
+            if (holdingsText == null) {
+                return ResponseEntity.ok(new AiChatResponseDto("보유 종목이 없습니다. 먼저 주식을 매수해주세요."));
+            }
+            return ResponseEntity.ok(new AiChatResponseDto(aiService.analyzeHoldings(holdingsText)));
+        } catch (Exception e) {
+            log.error("종목 분석 실패: {}", e.getMessage());
+            return ResponseEntity.ok(new AiChatResponseDto("일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요."));
         }
-        return ResponseEntity.ok(new AiChatResponseDto(aiService.analyzeHoldings(holdingsText)));
     }
 
     @PostMapping("/analyze/portfolio")
     public ResponseEntity<AiChatResponseDto> analyzePortfolio() {
-        String holdingsText = buildHoldingsText();
-        if (holdingsText == null) {
-            return ResponseEntity.ok(new AiChatResponseDto("보유 종목이 없습니다. 먼저 주식을 매수해주세요."));
+        try {
+            String holdingsText = buildHoldingsText();
+            if (holdingsText == null) {
+                return ResponseEntity.ok(new AiChatResponseDto("보유 종목이 없습니다. 먼저 주식을 매수해주세요."));
+            }
+            return ResponseEntity.ok(new AiChatResponseDto(aiService.analyzePortfolio(holdingsText)));
+        } catch (Exception e) {
+            log.error("포트폴리오 분석 실패: {}", e.getMessage());
+            return ResponseEntity.ok(new AiChatResponseDto("일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요."));
         }
-        return ResponseEntity.ok(new AiChatResponseDto(aiService.analyzePortfolio(holdingsText)));
     }
 
     @PostMapping("/analyze/recommend")
     public ResponseEntity<AiChatResponseDto> recommendStocks() {
-        String holdingsText = buildHoldingsText();
-        if (holdingsText == null) {
-            return ResponseEntity.ok(new AiChatResponseDto("보유 종목이 없습니다. 먼저 주식을 매수해주세요."));
+        try {
+            String holdingsText = buildHoldingsText();
+            if (holdingsText == null) {
+                return ResponseEntity.ok(new AiChatResponseDto("보유 종목이 없습니다. 먼저 주식을 매수해주세요."));
+            }
+            return ResponseEntity.ok(new AiChatResponseDto(aiService.recommendStocks(holdingsText)));
+        } catch (Exception e) {
+            log.error("종목 추천 실패: {}", e.getMessage());
+            return ResponseEntity.ok(new AiChatResponseDto("일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요."));
         }
-        return ResponseEntity.ok(new AiChatResponseDto(aiService.recommendStocks(holdingsText)));
     }
 
     @GetMapping("/cubic/health")
@@ -113,6 +130,7 @@ public class AiController {
             boolean isOverseas = OVERSEAS.contains(h.getMarket());
             double currentPrice;
             try {
+                Thread.sleep(200);
                 if (isOverseas) {
                     String exchange = switch (h.getMarket()) {
                         case "NYSE" -> "NYS";
@@ -123,7 +141,11 @@ public class AiController {
                 } else {
                     currentPrice = Double.parseDouble(stockService.getDomesticStockPrice(h.getSymbol()).getPrice());
                 }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                currentPrice = h.getAvgPrice();
             } catch (Exception e) {
+                log.warn("현재가 조회 실패 [{}], 평균단가 사용: {}", h.getSymbol(), e.getMessage());
                 currentPrice = h.getAvgPrice();
             }
             double profitRate = (currentPrice - h.getAvgPrice()) / h.getAvgPrice() * 100;
