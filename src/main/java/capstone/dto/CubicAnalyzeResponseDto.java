@@ -22,6 +22,9 @@ public class CubicAnalyzeResponseDto {
     @JsonProperty("momentum_raw")
     private Integer momentumRaw;
 
+    @JsonProperty("cubic_score")
+    private Integer cubicScore;
+
     @Data
     public static class CellDto {
         private String x;
