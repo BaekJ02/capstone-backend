@@ -7,7 +7,6 @@ import capstone.dto.CubicAnalyzeResponseDto;
 import capstone.repository.HoldingRepository;
 import capstone.service.AiService;
 import capstone.service.CubicAiService;
-import capstone.service.StockService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +27,6 @@ public class AiController {
     private final AiService aiService;
     private final CubicAiService cubicAiService;
     private final HoldingRepository holdingRepository;
-    private final StockService stockService;
 
     @PostMapping("/chat")
     public ResponseEntity<AiChatResponseDto> chat(@RequestBody AiChatRequestDto request) {
@@ -122,40 +120,17 @@ public class AiController {
     private String buildHoldingsText() {
         Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         List<Holding> holdings = holdingRepository.findByUserId(userId);
-        if (holdings.isEmpty()) {
-            return null;
-        }
+        if (holdings.isEmpty()) return null;
+
         StringBuilder sb = new StringBuilder();
         for (Holding h : holdings) {
             boolean isOverseas = OVERSEAS.contains(h.getMarket());
-            double currentPrice;
-            try {
-                Thread.sleep(200);
-                if (isOverseas) {
-                    String exchange = switch (h.getMarket()) {
-                        case "NYSE" -> "NYS";
-                        case "AMEX" -> "AMS";
-                        default -> "NAS";
-                    };
-                    currentPrice = Double.parseDouble(stockService.getOverseasStockPrice(h.getSymbol(), exchange).getPrice());
-                } else {
-                    currentPrice = Double.parseDouble(stockService.getDomesticStockPrice(h.getSymbol()).getPrice());
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                currentPrice = h.getAvgPrice();
-            } catch (Exception e) {
-                log.warn("현재가 조회 실패 [{}], 평균단가 사용: {}", h.getSymbol(), e.getMessage());
-                currentPrice = h.getAvgPrice();
-            }
-            double profitRate = (currentPrice - h.getAvgPrice()) / h.getAvgPrice() * 100;
-            String profitStr = String.format("%+.2f%%", profitRate);
             if (isOverseas) {
-                sb.append(String.format("%s(%s) | %s | 보유수량: %d주 | 평균매수가: $%.2f | 현재가: $%.2f | 수익률: %s%n",
-                    h.getName(), h.getSymbol(), h.getMarket(), h.getQuantity(), h.getAvgPrice(), currentPrice, profitStr));
+                sb.append(String.format("%s(%s) | %s | 보유수량: %d주 | 평균매수가: $%.2f%n",
+                    h.getName(), h.getSymbol(), h.getMarket(), h.getQuantity(), h.getAvgPrice()));
             } else {
-                sb.append(String.format("%s(%s) | %s | 보유수량: %d주 | 평균매수가: %,.0f원 | 현재가: %,.0f원 | 수익률: %s%n",
-                    h.getName(), h.getSymbol(), h.getMarket(), h.getQuantity(), h.getAvgPrice(), currentPrice, profitStr));
+                sb.append(String.format("%s(%s) | %s | 보유수량: %d주 | 평균매수가: %,.0f원%n",
+                    h.getName(), h.getSymbol(), h.getMarket(), h.getQuantity(), h.getAvgPrice()));
             }
         }
         return sb.toString();
