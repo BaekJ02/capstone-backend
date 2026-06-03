@@ -68,10 +68,12 @@ public class AiController {
 
     @PostMapping("/cubic/analyze")
     public ResponseEntity<CubicAnalyzeResponseDto> cubicAnalyze(
-            @RequestParam String symbol, @RequestParam String market) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Long userId = (auth != null && auth.getPrincipal() instanceof Long) ? (Long) auth.getPrincipal() : null;
-        return ResponseEntity.ok(cubicAiService.analyze(symbol, market, userId));
+            @RequestBody Map<String, String> body) {
+        Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String symbol = body.get("symbol");
+        String market = body.getOrDefault("market", "KOSPI");
+        CubicAnalyzeResponseDto result = cubicAiService.analyze(symbol, market, userId);
+        return ResponseEntity.ok(result);
     }
 
     private static final Set<String> OVERSEAS = Set.of("NASDAQ", "NYSE", "AMEX", "OTHER");
