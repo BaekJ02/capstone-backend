@@ -66,6 +66,13 @@ public class AiController {
         return ResponseEntity.ok(Map.of("healthy", cubicAiService.isHealthy()));
     }
 
+    @GetMapping("/cubic/latest/{symbol}")
+    public ResponseEntity<?> cubicLatest(@PathVariable String symbol) {
+        CubicAnalyzeResponseDto result = cubicAiService.getLatestBySymbol(symbol);
+        if (result == null) return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(result);
+    }
+
     @PostMapping("/cubic/analyze")
     public ResponseEntity<CubicAnalyzeResponseDto> cubicAnalyze(
             @RequestBody Map<String, String> body) {

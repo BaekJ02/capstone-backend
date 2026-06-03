@@ -37,6 +37,9 @@ public class CubicCellLog {
     @Column(name = "action_code", nullable = false)
     private Integer actionCode;
 
+    @Column(name = "cubic_score")
+    private Integer cubicScore;
+
     @Column(name = "analyzed_at")
     private LocalDateTime analyzedAt;
 

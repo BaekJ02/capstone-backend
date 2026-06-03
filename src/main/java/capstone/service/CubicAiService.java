@@ -16,6 +16,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 @Slf4j
@@ -87,6 +88,37 @@ public class CubicAiService {
         }
     }
 
+    public CubicAnalyzeResponseDto getLatestBySymbol(String symbol) {
+        return cubicCellLogRepository.findTopBySymbolOrderByAnalyzedAtDesc(symbol)
+            .map(log -> {
+                CubicAnalyzeResponseDto dto = new CubicAnalyzeResponseDto();
+                dto.setSymbol(log.getSymbol());
+                dto.setAction(log.getAction());
+                dto.setActionCode(log.getActionCode());
+                dto.setCubicScore(log.getCubicScore());
+                CubicAnalyzeResponseDto.CellDto cell = new CubicAnalyzeResponseDto.CellDto();
+                cell.setCellNum(log.getCellNum());
+                dto.setCell(cell);
+                return dto;
+            })
+            .orElse(null);
+    }
+
+    public CubicAnalyzeResponseDto analyzeAndCache(String symbol, String market, Long userId) {
+        CubicAnalyzeResponseDto cached = getLatestBySymbol(symbol);
+        if (cached != null) return cached;
+        return analyze(symbol, market, userId);
+    }
+
+    public void analyzeTop(String symbol, String market) {
+        try {
+            analyze(symbol, market, null);
+            log.info("Cubic 분석 완료: {}", symbol);
+        } catch (Exception e) {
+            log.warn("Cubic 분석 실패: {} - {}", symbol, e.getMessage());
+        }
+    }
+
     private List<ChartDataDto> fetchOhlcv(String symbol, String market) {
         if (OVERSEAS.contains(market)) {
             String exchange = switch (market) {
@@ -108,6 +140,7 @@ public class CubicAiService {
         cellLog.setCellNum(resp.getCell().getCellNum());
         cellLog.setAction(resp.getAction());
         cellLog.setActionCode(resp.getActionCode());
+        cellLog.setCubicScore(resp.getCubicScore());
 
         if (userId != null) {
             userRepository.findById(userId).ifPresent(cellLog::setUser);
