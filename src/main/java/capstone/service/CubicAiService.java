@@ -5,11 +5,14 @@ import capstone.dto.ChartDataDto;
 import capstone.dto.CubicAnalyzeRequestDto;
 import capstone.dto.CubicAnalyzeRequestDto.OhlcvRowDto;
 import capstone.dto.CubicAnalyzeResponseDto;
+import capstone.dto.RankingItemDto;
 import capstone.repository.CubicCellLogRepository;
 import capstone.repository.UserRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -18,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Slf4j
 @Service
@@ -28,11 +33,35 @@ public class CubicAiService {
     private final StockService stockService;
     private final CubicCellLogRepository cubicCellLogRepository;
     private final UserRepository userRepository;
+    private final MarketRankingService marketRankingService;
+    private final ExecutorService executor = Executors.newFixedThreadPool(3);
 
     @Value("${cubic.ai.url}")
     private String cubicAiUrl;
 
     private static final Set<String> OVERSEAS = Set.of("NASDAQ", "NYSE", "AMEX", "OTHER");
+
+    @PostConstruct
+    public void initCubicAnalysis() {
+        executor.submit(() -> {
+            try {
+                Thread.sleep(15000);
+                log.info("=== Cubic AI 초기 분석 시작 ===");
+                analyzeTopDomestic();
+                analyzeTopOverseas();
+                log.info("=== Cubic AI 초기 분석 완료 ===");
+            } catch (Exception e) {
+                log.error("Cubic 초기 분석 오류: {}", e.getMessage());
+            }
+        });
+    }
+
+    @Scheduled(cron = "0 0 */4 * * *")
+    public void scheduledCubicAnalysis() {
+        log.info("=== Cubic AI 정기 분석 시작 ===");
+        executor.submit(this::analyzeTopDomestic);
+        executor.submit(this::analyzeTopOverseas);
+    }
 
     public CubicAnalyzeResponseDto analyze(String symbol, String market, Long userId) {
         List<ChartDataDto> chartData = fetchOhlcv(symbol, market);
@@ -116,6 +145,42 @@ public class CubicAiService {
             log.info("Cubic 분석 완료: {}", symbol);
         } catch (Exception e) {
             log.warn("Cubic 분석 실패: {} - {}", symbol, e.getMessage());
+        }
+    }
+
+    private void analyzeTopDomestic() {
+        try {
+            List<RankingItemDto> top = marketRankingService.getDomesticRanking("VOLUME");
+            List<RankingItemDto> top20 = top.subList(0, Math.min(20, top.size()));
+            log.info("국내 상위 {}종목 Cubic 분석 시작", top20.size());
+            for (RankingItemDto item : top20) {
+                try {
+                    analyzeTop(item.getSymbol(), "KOSPI");
+                    Thread.sleep(800);
+                } catch (Exception e) {
+                    log.warn("국내 종목 분석 실패 [{}]: {}", item.getSymbol(), e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.error("국내 상위 종목 분석 오류: {}", e.getMessage());
+        }
+    }
+
+    private void analyzeTopOverseas() {
+        try {
+            List<RankingItemDto> top = marketRankingService.getOverseasRanking("VOLUME");
+            List<RankingItemDto> top20 = top.subList(0, Math.min(20, top.size()));
+            log.info("미국 상위 {}종목 Cubic 분석 시작", top20.size());
+            for (RankingItemDto item : top20) {
+                try {
+                    analyzeTop(item.getSymbol(), "NASDAQ");
+                    Thread.sleep(800);
+                } catch (Exception e) {
+                    log.warn("미국 종목 분석 실패 [{}]: {}", item.getSymbol(), e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.error("미국 상위 종목 분석 오류: {}", e.getMessage());
         }
     }
 

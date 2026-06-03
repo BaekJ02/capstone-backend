@@ -73,6 +73,23 @@ public class AiController {
         return ResponseEntity.ok(result);
     }
 
+    @PostMapping("/cubic/batch")
+    public ResponseEntity<Map<String, Object>> cubicBatch(
+            @RequestBody List<String> symbols) {
+        Map<String, Object> result = new java.util.HashMap<>();
+        for (String symbol : symbols) {
+            CubicAnalyzeResponseDto dto = cubicAiService.getLatestBySymbol(symbol);
+            if (dto != null) {
+                result.put(symbol, Map.of(
+                    "action", dto.getAction(),
+                    "cubicScore", dto.getCubicScore() != null ? dto.getCubicScore() : 50,
+                    "cellNum", dto.getCell() != null ? dto.getCell().getCellNum() : -1
+                ));
+            }
+        }
+        return ResponseEntity.ok(result);
+    }
+
     @PostMapping("/cubic/analyze")
     public ResponseEntity<CubicAnalyzeResponseDto> cubicAnalyze(
             @RequestBody Map<String, String> body) {
