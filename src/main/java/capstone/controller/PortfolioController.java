@@ -21,4 +21,10 @@ public class PortfolioController {
         PortfolioChartDto chart = portfolioSnapshotService.getPortfolioChart(userId, days);
         return ResponseEntity.ok(chart);
     }
+
+    @PostMapping("/snapshot/trigger")
+    public ResponseEntity<String> triggerSnapshot() {
+        portfolioSnapshotService.saveSnapshotsForAllUsers();
+        return ResponseEntity.ok("스냅샷 저장 완료");
+    }
 }
