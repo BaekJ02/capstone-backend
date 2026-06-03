@@ -7,6 +7,7 @@ import capstone.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -43,5 +44,24 @@ public class UserService {
     public User findById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("존재하지 않는 유저입니다."));
+    }
+
+    @Transactional
+    public void deposit(Long userId, Long amount) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        user.setBalance(user.getBalance() + amount);
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void withdraw(Long userId, Long amount) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        if (user.getBalance() < amount) {
+            throw new IllegalArgumentException("잔액이 부족합니다.");
+        }
+        user.setBalance(user.getBalance() - amount);
+        userRepository.save(user);
     }
 }
