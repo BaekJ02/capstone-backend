@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,6 +47,17 @@ public class CubicAiService {
         executor.submit(() -> {
             try {
                 Thread.sleep(15000);
+                LocalDateTime twoHoursAgo = LocalDateTime.now().minusHours(2);
+                boolean recentlyAnalyzed = cubicCellLogRepository
+                    .findTopByOrderByAnalyzedAtDesc()
+                    .map(log -> log.getAnalyzedAt() != null && log.getAnalyzedAt().isAfter(twoHoursAgo))
+                    .orElse(false);
+
+                if (recentlyAnalyzed) {
+                    log.info("=== Cubic AI 초기 분석 스킵 (2시간 이내 분석 기록 존재) ===");
+                    return;
+                }
+
                 log.info("=== Cubic AI 초기 분석 시작 ===");
                 analyzeTopDomestic();
                 analyzeTopOverseas();

@@ -9,4 +9,5 @@ public interface CubicCellLogRepository extends JpaRepository<CubicCellLog, Long
     List<CubicCellLog> findByUserIdOrderByAnalyzedAtDesc(Long userId);
     List<CubicCellLog> findBySymbolOrderByAnalyzedAtDesc(String symbol);
     Optional<CubicCellLog> findTopBySymbolOrderByAnalyzedAtDesc(String symbol);
+    Optional<CubicCellLog> findTopByOrderByAnalyzedAtDesc();
 }
