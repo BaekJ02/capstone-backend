@@ -134,10 +134,28 @@ public class StockSearchService {
     public List<StockSearchDto> search(String keyword) {
         String upper = keyword.toUpperCase();
         return stockList.stream()
-                .filter(stock ->
-                        stock.getName().toUpperCase().contains(upper) ||
-                                stock.getSymbol().toUpperCase().contains(upper))
-                .limit(20)
-                .collect(Collectors.toList());
+            .filter(stock ->
+                stock.getName().toUpperCase().contains(upper) ||
+                stock.getSymbol().toUpperCase().contains(upper))
+            .sorted((a, b) -> {
+                // 심볼 완전 일치 최우선
+                boolean aExact = a.getSymbol().toUpperCase().equals(upper);
+                boolean bExact = b.getSymbol().toUpperCase().equals(upper);
+                if (aExact && !bExact) return -1;
+                if (!aExact && bExact) return 1;
+                // 심볼 시작 일치 다음
+                boolean aStart = a.getSymbol().toUpperCase().startsWith(upper);
+                boolean bStart = b.getSymbol().toUpperCase().startsWith(upper);
+                if (aStart && !bStart) return -1;
+                if (!aStart && bStart) return 1;
+                // 종목명 시작 일치 다음
+                boolean aNameStart = a.getName().toUpperCase().startsWith(upper);
+                boolean bNameStart = b.getName().toUpperCase().startsWith(upper);
+                if (aNameStart && !bNameStart) return -1;
+                if (!aNameStart && bNameStart) return 1;
+                return 0;
+            })
+            .limit(20)
+            .collect(Collectors.toList());
     }
 }
