@@ -71,29 +71,45 @@ public class StockService {
 
     // 미국 주식 현재가
     public StockPriceDto getOverseasStockPrice(String symbol, String exchange) {
-        String url = baseUrl + "/uapi/overseas-price/v1/quotations/price"
-                + "?AUTH="
-                + "&EXCD=" + exchange
-                + "&SYMB=" + symbol;
+        String[] exchanges = exchange.equals("NAS")
+            ? new String[]{"NAS", "NYS", "AMS"}
+            : new String[]{exchange, "NAS", "NYS", "AMS"};
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("authorization", "Bearer " + kisAuthService.getAccessToken());
-        headers.set("appkey", appKey);
-        headers.set("appsecret", appSecret);
-        headers.set("tr_id", "HHDFS00000300");
-        headers.set("custtype", "P");
+        for (String excd : exchanges) {
+            try {
+                String url = baseUrl + "/uapi/overseas-price/v1/quotations/price"
+                        + "?AUTH="
+                        + "&EXCD=" + excd
+                        + "&SYMB=" + symbol;
 
-        HttpEntity<Void> request = new HttpEntity<>(headers);
-        Map<String, Object> response = restTemplate.exchange(url, HttpMethod.GET, request, Map.class).getBody();
+                HttpHeaders headers = new HttpHeaders();
+                headers.set("authorization", "Bearer " + kisAuthService.getAccessToken());
+                headers.set("appkey", appKey);
+                headers.set("appsecret", appSecret);
+                headers.set("tr_id", "HHDFS00000300");
+                headers.set("custtype", "P");
 
-        Map<String, String> output = (Map<String, String>) response.get("output");
+                HttpEntity<Void> request = new HttpEntity<>(headers);
+                Map<String, Object> response = restTemplate.exchange(url, HttpMethod.GET, request, Map.class).getBody();
+                Map<String, String> output = (Map<String, String>) response.get("output");
 
+                if (output != null && output.get("last") != null && !output.get("last").isEmpty() && !output.get("last").equals("0")) {
+                    StockPriceDto dto = new StockPriceDto();
+                    dto.setSymbol(symbol);
+                    dto.setPrice(output.get("last"));
+                    dto.setChange(output.get("diff"));
+                    dto.setChangePercent(output.get("rate"));
+                    return dto;
+                }
+            } catch (Exception e) {
+                log.warn("해외주식 가격 조회 실패 [{}/{}]: {}", symbol, excd, e.getMessage());
+            }
+        }
         StockPriceDto dto = new StockPriceDto();
         dto.setSymbol(symbol);
-        dto.setPrice(output.get("last"));
-        dto.setChange(output.get("diff"));
-        dto.setChangePercent(output.get("rate"));
-
+        dto.setPrice("0");
+        dto.setChange("0");
+        dto.setChangePercent("0");
         return dto;
     }
 
@@ -168,40 +184,50 @@ public class StockService {
 
     // 미국 주식 차트 데이터
     public List<ChartDataDto> getOverseasChartData(String symbol, String exchange, String period) {
-        String url = baseUrl + "/uapi/overseas-price/v1/quotations/dailyprice"
-                + "?AUTH="
-                + "&EXCD=" + exchange
-                + "&SYMB=" + symbol
-                + "&GUBN=" + period
-                + "&BYMD="
-                + "&MODP=1";
+        String[] exchanges = exchange.equals("NAS")
+            ? new String[]{"NAS", "NYS", "AMS"}
+            : new String[]{exchange, "NAS", "NYS", "AMS"};
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("authorization", "Bearer " + kisAuthService.getAccessToken());
-        headers.set("appkey", appKey);
-        headers.set("appsecret", appSecret);
-        headers.set("tr_id", "HHDFS76240000");
-        headers.set("custtype", "P");
+        for (String excd : exchanges) {
+            try {
+                String url = baseUrl + "/uapi/overseas-price/v1/quotations/dailyprice"
+                        + "?AUTH="
+                        + "&EXCD=" + excd
+                        + "&SYMB=" + symbol
+                        + "&GUBN=" + period
+                        + "&BYMD="
+                        + "&MODP=1";
 
-        HttpEntity<Void> request = new HttpEntity<>(headers);
-        Map<String, Object> response = restTemplate.exchange(url, HttpMethod.GET, request, Map.class).getBody();
+                HttpHeaders headers = new HttpHeaders();
+                headers.set("authorization", "Bearer " + kisAuthService.getAccessToken());
+                headers.set("appkey", appKey);
+                headers.set("appsecret", appSecret);
+                headers.set("tr_id", "HHDFS76240000");
+                headers.set("custtype", "P");
 
-        List<Map<String, String>> output = (List<Map<String, String>>) response.get("output2");
+                HttpEntity<Void> request = new HttpEntity<>(headers);
+                Map<String, Object> response = restTemplate.exchange(url, HttpMethod.GET, request, Map.class).getBody();
+                List<Map<String, String>> output = (List<Map<String, String>>) response.get("output2");
 
-        List<ChartDataDto> result = new ArrayList<>();
-        if (output != null) {
-            for (Map<String, String> item : output) {
-                ChartDataDto dto = new ChartDataDto();
-                dto.setDate(item.get("xymd"));    // 날짜
-                dto.setOpen(item.get("open"));    // 시가
-                dto.setHigh(item.get("high"));    // 고가
-                dto.setLow(item.get("low"));      // 저가
-                dto.setClose(item.get("clos"));   // 종가
-                dto.setVolume(item.get("tvol"));  // 거래량
-                result.add(dto);
+                if (output != null && !output.isEmpty()) {
+                    List<ChartDataDto> result = new ArrayList<>();
+                    for (Map<String, String> item : output) {
+                        ChartDataDto dto = new ChartDataDto();
+                        dto.setDate(item.get("xymd"));
+                        dto.setOpen(item.get("open"));
+                        dto.setHigh(item.get("high"));
+                        dto.setLow(item.get("low"));
+                        dto.setClose(item.get("clos"));
+                        dto.setVolume(item.get("tvol"));
+                        result.add(dto);
+                    }
+                    return result;
+                }
+            } catch (Exception e) {
+                log.warn("해외주식 차트 조회 실패 [{}/{}]: {}", symbol, excd, e.getMessage());
             }
         }
-        return result;
+        return new ArrayList<>();
     }
 
     // 국내 주식 분봉 데이터
