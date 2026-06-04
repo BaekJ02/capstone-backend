@@ -108,7 +108,8 @@ public class AiController {
     @PostMapping("/cubic/analyze")
     public ResponseEntity<CubicAnalyzeResponseDto> cubicAnalyze(
             @RequestBody Map<String, String> body) {
-        Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Long userId = principal instanceof Long ? (Long) principal : Long.parseLong(principal.toString());
         String symbol = body.get("symbol");
         String market = body.getOrDefault("market", "KOSPI");
         CubicAnalyzeResponseDto result = cubicAiService.analyze(symbol, market, userId);
