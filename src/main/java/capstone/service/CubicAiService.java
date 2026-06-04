@@ -140,7 +140,11 @@ public class CubicAiService {
                 dto.setCubicScore(log.getCubicScore());
                 CubicAnalyzeResponseDto.CellDto cell = new CubicAnalyzeResponseDto.CellDto();
                 cell.setCellNum(log.getCellNum());
+                cell.setX(log.getCellX() != null ? String.valueOf(log.getCellX()) : null);
+                cell.setY(log.getCellY() != null ? String.valueOf(log.getCellY()) : null);
+                cell.setZ(log.getCellZ() != null ? String.valueOf(log.getCellZ()) : null);
                 dto.setCell(cell);
+                dto.setDate(log.getAnalyzedAt() != null ? log.getAnalyzedAt().toLocalDate().toString() : null);
                 return dto;
             })
             .orElse(null);
