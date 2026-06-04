@@ -1,10 +1,13 @@
 package capstone.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class StockSubscriptionService {
@@ -105,5 +108,35 @@ public class StockSubscriptionService {
 
     public Set<String> getAfterMarketSymbols() {
         return afterMarketSymbols;
+    }
+
+    public void resetAll() {
+        for (String symbol : new HashSet<>(domesticSymbols)) {
+            kisWebSocketClient.unsubscribePriceOnly(symbol);
+            kisWebSocketClient.unsubscribe(symbol);
+        }
+        domesticSymbols.clear();
+
+        for (String sym : new HashSet<>(overseasSymbols)) {
+            kisWebSocketClient.unsubscribeOverseas(sym);
+        }
+        overseasSymbols.clear();
+
+        for (String sym : new HashSet<>(overseasOrderbookSymbols)) {
+            kisWebSocketClient.unsubscribeOverseasOrderbook(sym);
+        }
+        overseasOrderbookSymbols.clear();
+
+        for (String sym : new HashSet<>(afterMarketSymbols)) {
+            kisWebSocketClient.unsubscribeAfterMarket(sym);
+        }
+        afterMarketSymbols.clear();
+
+        for (String sym : new HashSet<>(afterMarketOrderbookSymbols)) {
+            kisWebSocketClient.unsubscribeAfterMarketOrderbook(sym);
+        }
+        afterMarketOrderbookSymbols.clear();
+
+        log.info("모든 WebSocket 구독 초기화 완료");
     }
 }
