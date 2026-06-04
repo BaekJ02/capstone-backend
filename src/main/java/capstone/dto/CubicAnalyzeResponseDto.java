@@ -25,6 +25,9 @@ public class CubicAnalyzeResponseDto {
     @JsonProperty("cubic_score")
     private Integer cubicScore;
 
+    @JsonProperty("description")
+    private CubicDescriptionDto description;
+
     @Data
     public static class CellDto {
         private String x;
@@ -33,5 +36,26 @@ public class CubicAnalyzeResponseDto {
 
         @JsonProperty("cell_num")
         private Integer cellNum;
+    }
+
+    @Data
+    public static class CubicDescriptionDto {
+        @JsonProperty("regime_desc")
+        private String regimeDesc;
+
+        @JsonProperty("risk_desc")
+        private String riskDesc;
+
+        @JsonProperty("momentum_desc")
+        private String momentumDesc;
+
+        @JsonProperty("conclusion")
+        private String conclusion;
+
+        @JsonProperty("detail")
+        private String detail;
+
+        @JsonProperty("summary")
+        private String summary;
     }
 }
