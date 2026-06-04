@@ -110,6 +110,7 @@ public class CubicAiService {
                     .uri(cubicAiUrl + "/health")
                     .retrieve()
                     .bodyToMono(Map.class)
+                    .timeout(java.time.Duration.ofSeconds(3))
                     .block();
             return result != null && "ok".equals(result.get("status"));
         } catch (Exception e) {
@@ -149,6 +150,10 @@ public class CubicAiService {
     }
 
     private void analyzeTopDomestic() {
+        if (!isHealthy()) {
+            log.warn("Cubic AI 서버 미응답 - 국내 상위 종목 분석 스킵");
+            return;
+        }
         try {
             List<RankingItemDto> top = marketRankingService.getDomesticRanking("VOLUME");
             List<RankingItemDto> top20 = top.subList(0, Math.min(20, top.size()));
@@ -167,6 +172,10 @@ public class CubicAiService {
     }
 
     private void analyzeTopOverseas() {
+        if (!isHealthy()) {
+            log.warn("Cubic AI 서버 미응답 - 미국 상위 종목 분석 스킵");
+            return;
+        }
         try {
             List<RankingItemDto> top = marketRankingService.getOverseasRanking("VOLUME");
             List<RankingItemDto> top20 = top.subList(0, Math.min(20, top.size()));
